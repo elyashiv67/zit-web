@@ -1,0 +1,73 @@
+-- 1. Create ROLES first (because Users depend on it)
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE
+);
+
+-- 2. Create USERS (depends on Roles)
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_name VARCHAR(255) NOT NULL UNIQUE,
+    pass VARCHAR(255) NOT NULL,
+    police_id VARCHAR(255) NOT NULL UNIQUE,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    location VARCHAR(255),
+    role_id INT NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+-- 3. Create TASKS (depends on Users)
+CREATE TABLE tasks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    due_at DATE NULL,
+    is_done TINYINT DEFAULT 0, -- 0 = Not Done, 1 = Done
+    notes TEXT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 4. Create TASK ITEMS (The "Checklist" inside a task)
+CREATE TABLE task_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    task_id INT NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    is_done TINYINT DEFAULT 0,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+-- 5. Create SUSPECTS (depends on Users)
+CREATE TABLE suspects (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    sus_id VARCHAR(255) UNIQUE, -- Internal ID
+    pela_id VARCHAR(255),       -- External ID
+    last_seen TEXT,
+    last_seen_date DATE,
+    location VARCHAR(255),
+    user_id INT NOT NULL,       -- The officer in charge
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- 6. Create TASK ATTACHMENTS (Files for tasks)
+CREATE TABLE task_attachments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    task_id INT NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+-- 7. Create SUSPECT ATTACHMENTS (Files for suspects)
+CREATE TABLE suspect_attachments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    suspect_id INT NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (suspect_id) REFERENCES suspects(id) ON DELETE CASCADE
+);
