@@ -1,3 +1,25 @@
+function getYearFromDigits(value) {
+    if (value.length >= 8) {
+        return parseInt(value.substring(4, 8), 10);
+    }
+    if (value.length >= 6) {
+        return 2000 + parseInt(value.substring(4, 6), 10);
+    }
+    return 2000;
+}
+
+function getMaxDaysForValue(value) {
+    if (value.length < 4) {
+        return 31;
+    }
+    const monthNum = parseInt(value.substring(2, 4), 10);
+    if (!monthNum || monthNum < 1 || monthNum > 12) {
+        return 31;
+    }
+    const year = getYearFromDigits(value);
+    return new Date(year, monthNum, 0).getDate();
+}
+
 // Auto-format date input with slashes
 function formatDateInput(input) {
     // Get the cursor position before formatting
@@ -72,9 +94,7 @@ function formatDateInput(input) {
         
         // Validate day based on month (if we have both day and month)
         const day = parseInt(value.substring(0, 2));
-        const monthNum = parseInt(value.substring(2, 4));
-        const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        const maxDay = daysInMonth[monthNum - 1] || 31;
+        const maxDay = getMaxDaysForValue(value);
         if (day > maxDay) {
             // Correct day to max for that month
             const correctedDay = String(maxDay).padStart(2, '0');
@@ -311,8 +331,8 @@ function calculateTimeDifference() {
         const dvrDate = dvrDateInput.value.trim();
         const currentDate = currentDateInput.value.trim();
         
-        // Validate date format (DD/MM/YYYY)
-        const dateRegex = /^([0-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/(\d{4})$/;
+        // Validate date format (DD/MM/YY or DD/MM/YYYY) with day >= 01
+        const dateRegex = /^(0[1-9]|[12][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/(\d{2}|\d{4})$/;
         
         if (!dvrDate || !currentDate) {
             resultDiv.textContent = 'time to go to';
@@ -327,8 +347,16 @@ function calculateTimeDifference() {
         }
         
         // Parse dates
-        const [dvrDay, dvrMonth, dvrYear] = dvrDate.split('/').map(Number);
-        const [currentDay, currentMonth, currentYear] = currentDate.split('/').map(Number);
+        let [dvrDay, dvrMonth, dvrYear] = dvrDate.split('/').map(Number);
+        let [currentDay, currentMonth, currentYear] = currentDate.split('/').map(Number);
+        
+        // Support 2-digit years by assuming 2000+
+        if (dvrYear < 100) {
+            dvrYear += 2000;
+        }
+        if (currentYear < 100) {
+            currentYear += 2000;
+        }
         
         // Create Date objects
         const dvrDateTime = new Date(dvrYear, dvrMonth - 1, dvrDay, dvrHours, dvrMinutes, dvrSeconds);
@@ -336,13 +364,8 @@ function calculateTimeDifference() {
         
         // Calculate difference in milliseconds
         let diffMs = dvrDateTime.getTime() - currentDateTime.getTime();
-        
-        // If negative, DVR time is in the past
-        if (diffMs < 0) {
-            resultDiv.textContent = 'time to go to';
-            resultDiv.style.color = 'black';
-            return;
-        }
+        const dvrIsPast = diffMs < 0;
+        diffMs = Math.abs(diffMs);
         
         // Convert to total seconds
         const diffSeconds = Math.floor(diffMs / 1000);
@@ -360,21 +383,24 @@ function calculateTimeDifference() {
         const formattedMinutes = String(minutes).padStart(2, '0');
         const formattedSeconds = String(seconds).padStart(2, '0');
         
-        resultDiv.textContent = `${formattedDays} days ${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-        resultDiv.style.color = 'black';
+        const differenceText = `${formattedDays} days ${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+        
+        if (dvrIsPast) {
+            resultDiv.textContent = `DVR time already passed by ${differenceText}`;
+        } else {
+            resultDiv.textContent = differenceText;
+            resultDiv.style.color = 'black';
+        }
     } else {
         // Calculate without dates (time only)
         // Convert to total seconds
         const dvrTotalSeconds = dvrHours * 3600 + dvrMinutes * 60 + dvrSeconds;
         const currentTotalSeconds = currentHours * 3600 + currentMinutes * 60 + currentSeconds;
         
-        // Calculate difference
+        // Calculate difference (absolute so we always show how far apart they are)
         let diffSeconds = dvrTotalSeconds - currentTotalSeconds;
-        
-        // Handle day rollover (if DVR time is next day)
-        if (diffSeconds < 0) {
-            diffSeconds += 24 * 3600; // Add 24 hours
-        }
+        const dvrIsPast = diffSeconds < 0;
+        diffSeconds = Math.abs(diffSeconds);
         
         // Convert back to hours, minutes, seconds
         const hours = Math.floor(diffSeconds / 3600);
@@ -386,8 +412,15 @@ function calculateTimeDifference() {
         const formattedMinutes = String(minutes).padStart(2, '0');
         const formattedSeconds = String(seconds).padStart(2, '0');
         
-        resultDiv.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-        resultDiv.style.color = 'black';
+        const differenceText = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+        
+        if (dvrIsPast) {
+            resultDiv.textContent = `DVR time already passed by ${differenceText}`;
+            resultDiv.style.color = 'black';
+        } else {
+            resultDiv.textContent = differenceText;
+            resultDiv.style.color = 'black';
+        }
     }
 }
 
@@ -427,27 +460,26 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle backspace/delete on separators for time inputs
     function handleTimeKeydown(e) {
-        if (e.key === 'Backspace' || e.key === 'Delete') {
-            const cursorPos = e.target.selectionStart;
-            const value = e.target.value;
-            
-            if (cursorPos > 0 && cursorPos <= value.length) {
-                const charAtCursor = value[cursorPos - 1];
-                if (charAtCursor === ':') {
-                    // User is trying to delete a colon, delete the digit before it
-                    e.preventDefault();
-                    if (cursorPos === 3) {
-                        // Delete last digit of hours
-                        e.target.value = value.substring(0, 1) + value.substring(3);
-                        e.target.setSelectionRange(1, 1);
-                    } else if (cursorPos === 6) {
-                        // Delete last digit of minutes
-                        e.target.value = value.substring(0, 4) + value.substring(6);
-                        e.target.setSelectionRange(4, 4);
-                    }
-                    formatTimeInput(e.target);
-                }
-            }
+        if (e.key !== 'Backspace' && e.key !== 'Delete') {
+            return;
+        }
+        const cursorPos = e.target.selectionStart;
+        const selectionEnd = e.target.selectionEnd;
+        const value = e.target.value;
+        
+        // If a range is selected, let the browser handle it
+        if (cursorPos !== selectionEnd) {
+            return;
+        }
+        
+        if (e.key === 'Backspace' && cursorPos > 0 && value[cursorPos - 1] === ':') {
+            e.preventDefault();
+            // Move cursor before the colon so the next backspace deletes the digit
+            e.target.setSelectionRange(cursorPos - 1, cursorPos - 1);
+        } else if (e.key === 'Delete' && value[cursorPos] === ':') {
+            e.preventDefault();
+            // Move cursor after the colon so delete applies to the digit
+            e.target.setSelectionRange(cursorPos + 1, cursorPos + 1);
         }
     }
     
@@ -467,27 +499,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle backspace/delete on separators for date inputs
     function handleDateKeydown(e) {
-        if (e.key === 'Backspace' || e.key === 'Delete') {
-            const cursorPos = e.target.selectionStart;
-            const value = e.target.value;
-            
-            if (cursorPos > 0 && cursorPos <= value.length) {
-                const charAtCursor = value[cursorPos - 1];
-                if (charAtCursor === '/') {
-                    // User is trying to delete a slash, delete the digit before it
-                    e.preventDefault();
-                    if (cursorPos === 3) {
-                        // Delete last digit of day
-                        e.target.value = value.substring(0, 1) + value.substring(3);
-                        e.target.setSelectionRange(1, 1);
-                    } else if (cursorPos === 6) {
-                        // Delete last digit of month
-                        e.target.value = value.substring(0, 4) + value.substring(6);
-                        e.target.setSelectionRange(4, 4);
-                    }
-                    formatDateInput(e.target);
-                }
-            }
+        if (e.key !== 'Backspace' && e.key !== 'Delete') {
+            return;
+        }
+        const cursorPos = e.target.selectionStart;
+        const selectionEnd = e.target.selectionEnd;
+        const value = e.target.value;
+        
+        if (cursorPos !== selectionEnd) {
+            return;
+        }
+        
+        if (e.key === 'Backspace' && cursorPos > 0 && value[cursorPos - 1] === '/') {
+            e.preventDefault();
+            e.target.setSelectionRange(cursorPos - 1, cursorPos - 1);
+        } else if (e.key === 'Delete' && value[cursorPos] === '/') {
+            e.preventDefault();
+            e.target.setSelectionRange(cursorPos + 1, cursorPos + 1);
         }
     }
     
