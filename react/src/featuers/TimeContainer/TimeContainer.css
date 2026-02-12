@@ -1,0 +1,105 @@
+/* Main wrapper to center the card on the page */
+.page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align to top */
+    min-height: 100vh;
+    padding: 4rem 2rem;
+    box-sizing: border-box;
+}
+
+/* The main card container for our calculator */
+.calculator-card {
+    background-color: var(--surface-color); /* Using the dark slate for the card */
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Style for the title */
+.card-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 0;
+    color: var(--primary-color); /* Red title */
+}
+
+/* Grouping for the time inputs */
+.inputs-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Grouping for the buttons */
+.buttons-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* --- Button Styles --- */
+button {
+    display: inline-block;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1;
+    border-radius: 8px;
+    padding: 12px 16px;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+}
+
+/* Primary button style (Calculate) */
+.buttons-group button:last-of-type {
+    color: var(--text-color);
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.buttons-group button:last-of-type:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    transform: translateY(-2px);
+}
+
+/* Secondary button style (Get Time) */
+.buttons-group button:first-of-type {
+    background-color: transparent;
+    color: var(--text-color);
+    border-color: var(--text-color);
+}
+
+.buttons-group button:first-of-type:hover {
+    background-color: rgba(245, 246, 246, 0.1);
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* --- Results Styles --- */
+.results-group {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.results-group p {
+    margin: 0.5rem 0;
+    color: var(--text-color);
+}
+
+.results-group p strong {
+    opacity: 0.8;
+}
