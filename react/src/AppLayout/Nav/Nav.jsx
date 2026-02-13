@@ -5,9 +5,8 @@ function Nav() {
     return (
         <>
             <div style={{display:'flex',gap:'10px'}}>
-                <NavLink to={"/aboutMe"}>about me</NavLink>
-                <NavLink to={"/images"}>images</NavLink>
-                <NavLink to={"/links"}>links</NavLink>
+                <NavLink to={"/"}>Time Diff</NavLink>
+                <NavLink to={"/Date"}>Date Diff</NavLink>
             </div>
         </>
     );

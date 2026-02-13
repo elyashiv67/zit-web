@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './TimeContainer.css';
 import TimeInput from "../TimeInput/TimeInput.jsx";
-import { TimeDiff, calculateTargetDvrTime } from "../HelpFunctions.js";
+import { TimeDiff, calculateTargetDvrDiff } from "../HelpFunctions.js";
 
 function TimeContainer() {
     const [CurrentTime, setCurrentTime] = useState(null);
@@ -14,7 +14,7 @@ function TimeContainer() {
     const handleTargetRealTimeChange = (newValue) => { setTargetRealTime(newValue); };
 
     const ShowRealTimeInDvr = (currentTime, dvrTime, targetRealTime) => {
-        const targetTime = calculateTargetDvrTime(currentTime, dvrTime, targetRealTime);
+        const targetTime = calculateTargetDvrDiff(currentTime, dvrTime, targetRealTime);
         if (targetTime) {
             setMessage(`Target DVR Time: ${targetTime.toLocaleTimeString()}`);
         } else {
