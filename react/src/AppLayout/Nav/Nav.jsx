@@ -1,12 +1,23 @@
 import React from 'react';
-import {NavLink} from "react-router";
+import { NavLink } from "react-router";
+import './Nav.css';
 
 function Nav() {
     return (
         <>
-            <div style={{display:'flex',gap:'10px'}}>
-                <NavLink to={"/"}>Time Diff</NavLink>
-                <NavLink to={"/Date"}>Date Diff</NavLink>
+            <div className="nav-list">
+                <NavLink
+                    to={"/"}
+                    className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
+                >
+                    Time Diff
+                </NavLink>
+                <NavLink
+                    to={"/Date"}
+                    className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
+                >
+                    Date Diff
+                </NavLink>
             </div>
         </>
     );

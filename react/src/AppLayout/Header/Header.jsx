@@ -7,8 +7,12 @@ function Header() {
     return (
         <header className="header">
             <div className="header-logo">ZitWeb</div>
-            <Logo/>
-            <Nav/>
+            <div className="header-nav">
+                <Nav />
+            </div>
+            <div className="header-right">
+                <Logo />
+            </div>
         </header>
     );
 }
