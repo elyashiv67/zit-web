@@ -1,18 +1,19 @@
 import { createTheme } from '@mui/material';
+import { COLORS } from './constants/colors';
 
 // Define and export the custom theme
- const darkTheme = createTheme({
+const darkTheme = createTheme({
   palette: {
     // Tell MUI we are in dark mode. This helps with text color inversion.
     mode: 'dark',
     primary: {
-      main: '#D54845', // Corresponds to --primary-color
+      main: COLORS.primary, // Corresponds to --primary-color
     },
     background: {
-      paper: '#3E4D53',    // Corresponds to --surface-color
+      paper: COLORS.surface,    // Corresponds to --surface-color
     },
     text: {
-      primary: '#F5F6F6', // Corresponds to --text-color
+      primary: COLORS.text, // Corresponds to --text-color
     },
   },
   components: {
@@ -22,23 +23,23 @@ import { createTheme } from '@mui/material';
         root: {
           // Style for the input label
           '& label': {
-            color: '#F5F6F6',
+            color: COLORS.text,
             opacity: 0.8,
           },
           '& label.Mui-focused': {
-            color: '#D54845', // Use primary color when focused
+            color: COLORS.primary, // Use primary color when focused
             opacity: 1,
           },
           // Style for the input border
           '& .MuiOutlinedInput-root': {
             '& fieldset': {
-              borderColor: '#704A42', // Corresponds to --border-color
+              borderColor: COLORS.border, // Corresponds to --border-color
             },
             '&:hover fieldset': {
-              borderColor: '#D54845', // Primary color on hover
+              borderColor: COLORS.primary, // Primary color on hover
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#D54845', // Primary color when focused
+              borderColor: COLORS.primary, // Primary color when focused
             },
           },
         },
@@ -52,7 +53,7 @@ const lightTheme = createTheme({
     // 1. Set the mode to 'light'
     mode: 'light',
     primary: {
-      main: '#D54845', // The primary red color remains the same
+      main: COLORS.primary, // The primary red color remains the same
     },
     background: {
       // Use a standard light color for component surfaces
@@ -74,7 +75,7 @@ const lightTheme = createTheme({
             opacity: 0.9,
           },
           '& label.Mui-focused': {
-            color: '#D54845', // The primary color for the focused label
+            color: COLORS.primary, // The primary color for the focused label
             opacity: 1,
           },
           // Style for the input border
@@ -84,11 +85,11 @@ const lightTheme = createTheme({
             },
             // Hovered border uses the primary color
             '&:hover fieldset': {
-              borderColor: '#D54845',
+              borderColor: COLORS.primary,
             },
             // Focused border also uses the primary color
             '&.Mui-focused fieldset': {
-              borderColor: '#D54845',
+              borderColor: COLORS.primary,
             },
           },
         },
@@ -97,4 +98,4 @@ const lightTheme = createTheme({
   },
 });
 
- export {darkTheme , lightTheme};
+export { darkTheme, lightTheme };

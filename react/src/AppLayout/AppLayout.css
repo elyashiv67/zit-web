@@ -6,7 +6,6 @@
 
 .main-content {
     flex: 1;
+    padding-top: 80px;
     width: 100%;
-    margin-top: 80px;
-    /* Space for fixed header */
 }

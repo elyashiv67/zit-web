@@ -1,0 +1,18 @@
+
+Hope you enjoy your new logo, here are the people that
+made your beautiful logo happen :)
+font name: IBMPlexSans-BoldItalic
+font link: https://fonts.google.com/specimen/IBM+Plex+Sans
+font author: Mike Abbink
+font author site: https://www.mikeabbink.com/
+
+
+icon designer: Cameron Pinegar
+icon designer link: /creator/camerpin/
+        
+
+fontColor: {"hex":"#ffffff"}
+bgColor: {"hex":"#040404"}
+iconColor: {"hex":"#B61616"}
+
+      

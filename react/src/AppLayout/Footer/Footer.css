@@ -2,9 +2,10 @@
     padding: 2rem;
     text-align: center;
     background: rgba(255, 255, 255, 0.02);
+    /* Leaving as specific opacity variant if needed or could use var(--white-low-op) */
     margin-top: auto;
     /* Push to bottom if content is short */
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--white-low-op);
 }
 
 .footer-text {

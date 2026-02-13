@@ -1,7 +1,8 @@
 import './App.css';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import TimeContainer from "./featuers/TimeContainer/TimeContainer.jsx";
+import {RouterProvider} from "react-router";
+import Router from "./featuers/Router/Main_R.jsx";
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { darkTheme } from './theme';
 
@@ -10,7 +11,7 @@ function App() {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <TimeContainer/>
+          <RouterProvider router={Router}/>
       </LocalizationProvider>
     </ThemeProvider>
   )
