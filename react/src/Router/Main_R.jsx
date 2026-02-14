@@ -1,15 +1,14 @@
 import React from 'react';
-import {createBrowserRouter} from "react-router";
-import AppLayout from "../../AppLayout/AppLayout.jsx";
-import TimeContainer from "../TimeContainer/TimeContainer.jsx";
-import DateContainer from "../DateContainer/DateContainer.jsx";
-
+import { createBrowserRouter } from "react-router";
+import AppLayout from "../AppLayout/AppLayout.jsx";
+import TimeContainer from "../featuers/TimeContainer/TimeContainer.jsx";
+import DateContainer from "../featuers/DateContainer/DateContainer.jsx";
+import TimeDiffrence from "../Pages/TimeDiffrence.jsx";
 
 const Router = createBrowserRouter([{
-    element: <AppLayout/>,
+    element: <AppLayout />,
     children: [
-        {path:'/' , element:<TimeContainer/>},
-        {path:'/Date', element:<DateContainer/>}
+        { path: '/', element: <TimeDiffrence /> }
     ]
 }])
 

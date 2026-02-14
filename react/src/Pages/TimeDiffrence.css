@@ -1,0 +1,45 @@
+.timeWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin: 2rem;
+    padding: 2rem;
+}
+
+.toggle-container {
+    display: flex;
+    background: var(--surface-color);
+    padding: 0.5rem;
+    border-radius: 12px;
+    gap: 0.5rem;
+}
+
+.toggle-btn {
+    background: transparent;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all var(--transition-normal);
+}
+
+.toggle-btn:hover {
+    color: var(--text-color);
+    background: var(--white-low-op);
+}
+
+.toggle-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 12px rgba(213, 72, 69, 0.3);
+}
+
+.content-area {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}

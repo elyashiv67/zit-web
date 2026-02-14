@@ -31,7 +31,7 @@ function TimeContainer() {
         <div className="page-wrapper">
             <div className="calculator-card">
                 <h1 className="card-title">Time Calculator</h1>
-                
+
                 <div className="inputs-group">
                     <TimeInput
                         labelName="DVR Time"
@@ -52,7 +52,7 @@ function TimeContainer() {
 
                 <div className="buttons-group">
                     <button onClick={getCurrentTime}>Get Current Time</button>
-                    <button onClick={() => ShowRealTimeInDvr(CurrentTime, DvrTime, targetRealTime)}>Calculate DVR</button>
+                    <button onClick={() => ShowRealTimeInDvr(CurrentTime, DvrTime, targetRealTime)}>Calculate DVR Time</button>
                 </div>
 
                 <div className="results-group">
