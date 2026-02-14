@@ -18,6 +18,7 @@
     "@mui/material": "^7.3.7",
     "@mui/x-date-pickers": "^8.27.0",
     "date-fns": "^4.1.0",
+    "jszip": "^3.10.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-dropzone": "^15.0.0",
