@@ -10,13 +10,7 @@ function Nav() {
                     to={"/"}
                     className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
                 >
-                    Time Diff
-                </NavLink>
-                <NavLink
-                    to={"/Date"}
-                    className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
-                >
-                    Date Diff
+                    Time Diffrence
                 </NavLink>
             </div>
         </>

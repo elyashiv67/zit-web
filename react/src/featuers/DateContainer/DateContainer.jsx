@@ -1,7 +1,7 @@
-import React, {useState} from 'react';
-import {DateDiff , calculateTargetDvrDiff} from "../HelpFunctions.js";
+import React, { useState } from 'react';
+import { DateDiff, calculateTargetDvrDiff } from "../HelpFunctions.js";
 import DateInput from "../DateInput/DateInput.jsx";
-import {format} from 'date-fns';
+import { format } from 'date-fns';
 import './DateContainer.css';
 
 function DateContainer() {
@@ -31,34 +31,34 @@ function DateContainer() {
     return (
         <div className="page-wrapper">
             <div className="calculator-card">
-            <h1 className="card-title">Date Calculator</h1>
-            <DateInput
-            labelName={"DVR Date"}
-            value={dvrDate}
-            onTimeChange={handleDvrDateChange}
-            />
+                <h1 className="card-title">Date Calculator</h1>
+                <DateInput
+                    labelName={"DVR Date"}
+                    value={dvrDate}
+                    onTimeChange={handleDvrDateChange}
+                />
 
-            <DateInput
-            labelName={"Current Date"}
-            value={currentDate}
-            onTimeChange={handleCurrentDateChange}
-            />
+                <DateInput
+                    labelName={"Current Date"}
+                    value={currentDate}
+                    onTimeChange={handleCurrentDateChange}
+                />
 
-            <DateInput
-            labelName={"Target Real Date"}
-            value={targetRealDate}
-            onTimeChange={handleTargetRealDateChange}
-            />
+                <DateInput
+                    labelName={"Target Real Date"}
+                    value={targetRealDate}
+                    onTimeChange={handleTargetRealDateChange}
+                />
 
-            <div className="buttons-group">
-                <button onClick={getCurrentDate}>Get Current Time</button>
-                <button onClick={() => ShowRealTimeInDvr(currentDate, dvrDate, targetRealDate)}>Calculate DVR</button>
-            </div>
+                <div className="buttons-group">
+                    <button onClick={getCurrentDate}>Get Current Date</button>
+                    <button onClick={() => ShowRealTimeInDvr(currentDate, dvrDate, targetRealDate)}>Calculate DVR Date</button>
+                </div>
 
-            <div className="results-group">
-                <p><strong>Date Difference:</strong> {DateDiff(currentDate, dvrDate)}</p>
-                <p><strong>{message}</strong></p>
-            </div>
+                <div className="results-group">
+                    <p><strong>Date Difference:</strong> {DateDiff(currentDate, dvrDate)}</p>
+                    <p><strong>{message}</strong></p>
+                </div>
             </div>
         </div>
     );
