@@ -12,6 +12,13 @@ function Nav() {
                 >
                     Time Diffrence
                 </NavLink>
+                <NavLink
+                    to={"/dev"}
+                    className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}
+                >
+                    dev
+                </NavLink>
+
             </div>
         </>
     );
