@@ -1,6 +1,7 @@
 {
   "name": "react",
   "private": true,
+  "homepage": "https://elyashiv67.github.io/zit-web",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
