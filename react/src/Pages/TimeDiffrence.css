@@ -43,3 +43,26 @@
     display: flex;
     justify-content: center;
 }
+
+@media (max-width: 600px) {
+    .timeWrapper {
+        padding: 1rem;
+        margin: 1rem;
+    }
+
+    .toggle-container {
+        padding: 0.4rem;
+        gap: 0.4rem;
+        scale: 1.4;
+        transform-origin: center;
+    }
+
+    .toggle-btn {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+    }
+
+    .content-area {
+        margin-top: 2rem;
+    }
+}
