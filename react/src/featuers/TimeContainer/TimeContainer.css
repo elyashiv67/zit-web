@@ -161,3 +161,53 @@ button:active {
     color: var(--primary-color);
     font-weight: 600;
 }
+
+@media (max-width: 600px) {
+    .page-wrapper {
+        padding: 2rem 1rem;
+        width: 100%;
+    }
+
+    .calculator-card {
+        padding: 2rem 1.5rem;
+        border-radius: 12px;
+    }
+
+    .card-title {
+        font-size: 1.5rem;
+    }
+
+    .buttons-group {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem;
+    }
+
+    .buttons-group button {
+        width: 100% !important;
+    }
+
+    .input-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .input-group {
+        width: 100%;
+    }
+
+    .input-group input {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+
+    button {
+        padding: 14px 20px;
+        font-size: 1rem;
+    }
+
+    .results-group {
+        font-size: 1.2rem !important;
+    }
+}

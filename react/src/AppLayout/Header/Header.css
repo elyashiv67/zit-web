@@ -43,3 +43,17 @@
 .header-right svg:hover {
     filter: drop-shadow(0 0 12px var(--primary-color));
 }
+
+@media (max-width: 600px) {
+    .header {
+        padding: 0 1rem;
+    }
+
+    .header-logo {
+        font-size: 1.2rem;
+    }
+
+    .header-right svg {
+        height: 50px;
+    }
+}
