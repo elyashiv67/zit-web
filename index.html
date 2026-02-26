@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>react</title>
+  <script type="text/javascript">
+    (function (l) {
+      if (l.search[1] === '=') {
+        var q = l.search.slice(1).split('&').map(function (s) { return s.replace(/~and~/g, '&') }).join('?');
+        window.history.replaceState(null, null,
+          l.pathname.slice(0, -1) + (q.slice(0, 1) !== '/' ? '/' : '') + q + l.hash
+        );
+      }
+    }(window.location))
+  </script>
+  <script type="module" crossorigin src="/zit-web/assets/index-Ff7pYGJt.js"></script>
+  <link rel="stylesheet" crossorigin href="/zit-web/assets/index-B0TZjSie.css">
+</head>
+
+<body>
+  <div id="root"></div>
+</body>
+
+</html>
