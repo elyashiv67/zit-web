@@ -71,8 +71,8 @@ function TimeContainer() {
 
                 <div className="buttons-group">
                     <button onClick={getCurrentTime}>Get Current Time</button>
-                    <button onClick={() => ShowRealTimeInDvr(CurrentTime, DvrTime, targetRealTime)}>Calculate DVR Time</button>
                     <button onClick={() => ShowRealTimeFromDvr(CurrentTime, DvrTime, targetDvrTime)}>Calculate Real Time</button>
+                    <button onClick={() => ShowRealTimeInDvr(CurrentTime, DvrTime, targetRealTime)}>Calculate DVR Time</button>
                 </div>
 
                 <div className="results-group">
