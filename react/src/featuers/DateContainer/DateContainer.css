@@ -92,6 +92,7 @@ button:active {
 
 /* Primary button style (Calculate) */
 .buttons-group button:last-of-type {
+    grid-column: span 2;
     color: #fff;
     /* Ensure white text */
     background: linear-gradient(135deg, var(--primary-color) 0%, #B83C39 100%);
