@@ -1,4 +1,4 @@
-import { differenceInMilliseconds, differenceInDays, intervalToDuration, add , sub } from 'date-fns';
+import { differenceInMilliseconds, differenceInDays, intervalToDuration, add, sub } from 'date-fns';
 
 function TimeDiff(current, dvrTime) {
     if (!current || !dvrTime) {
@@ -19,7 +19,7 @@ function TimeDiff(current, dvrTime) {
 
     const timeString = `${hours}:${minutes}:${seconds}`;
 
-    return isNegative ? `- ${timeString}` : timeString;
+    return isNegative ? timeString : `- ${timeString}`;
 }
 
 function DateDiff(current, dvrTime) {
@@ -77,4 +77,24 @@ function calculateTargetDvrDiff(currentTime, dvrTime, targetRealTime) {
     }
 }
 
-export { TimeDiff, DateDiff, calculateTargetDvrDiff };
+function calculateTargetRealTime(currentTime, dvrTime, targetDvrTime) {
+    if (!currentTime || !dvrTime || !targetDvrTime) return null;
+    const isDvrBehind = currentTime > dvrTime;
+    const start = isDvrBehind ? dvrTime : currentTime;
+    const end = isDvrBehind ? currentTime : dvrTime;
+    const days = differenceInDays(end, start);
+    const duration = intervalToDuration({ start, end });
+    const shiftAmount = {
+        days: days,
+        hours: duration.hours || 0,
+        minutes: duration.minutes || 0,
+        seconds: duration.seconds || 0
+    };
+    if (isDvrBehind) {
+        return add(targetDvrTime, shiftAmount);
+    } else {
+        return sub(targetDvrTime, shiftAmount);
+    }
+}
+
+export { TimeDiff, DateDiff, calculateTargetDvrDiff, calculateTargetRealTime };
