@@ -9,3 +9,9 @@
     padding-top: 80px;
     width: 100%;
 }
+
+@media (max-width: 600px) {
+    .main-content {
+        padding-top: 80px;
+    }
+}

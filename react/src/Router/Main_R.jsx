@@ -10,6 +10,6 @@ const Router = createBrowserRouter([{
         { path: '/', element: <TimeDiffrence /> },
         { path: '/dev', element: <FileContainer/>},
     ]
-}])
+}], { basename: '/zit-web/' })
 
 export default Router;

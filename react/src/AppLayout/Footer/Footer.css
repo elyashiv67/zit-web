@@ -12,3 +12,13 @@
     color: var(--text-muted);
     font-size: 0.9rem;
 }
+
+@media (max-width: 600px) {
+    .footer {
+        padding: 1rem;
+    }
+
+    .footer-text {
+        font-size: 0.8rem;
+    }
+}
