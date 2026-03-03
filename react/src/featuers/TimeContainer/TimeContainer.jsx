@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './TimeContainer.css';
 import TimeInput from "../TimeInput/TimeInput.jsx";
-import { TimeDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../HelpFunctions.js";
+import { TimeDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../HelpFunctions/HelpFunctions.js";
 
 function TimeContainer() {
     const [CurrentTime, setCurrentTime] = useState(null);

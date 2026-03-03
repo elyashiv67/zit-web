@@ -14,9 +14,9 @@ export const convertFilesToMp4 = async (files, onProgress) => {
             throw new Error("SharedArrayBuffer is not available. See console for details.");
         }
 
-        // Construct the absolute path to your public files
-        const baseURL = new URL('/ffmpeg-core.js', document.location).href;
-        const wasmURL = new URL('/ffmpeg-core.wasm', document.location).href;
+        // Construct the path to your public files, accounting for Vite's base path
+        const baseURL = new URL(`${import.meta.env.BASE_URL}ffmpeg-core.js`, document.location).href;
+        const wasmURL = new URL(`${import.meta.env.BASE_URL}ffmpeg-core.wasm`, document.location).href;
 
         console.log("Attempting to load FFmpeg Core from:", baseURL);
         console.log("Attempting to load FFmpeg WASM from:", wasmURL);
