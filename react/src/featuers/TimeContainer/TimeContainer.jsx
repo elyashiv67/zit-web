@@ -10,10 +10,12 @@ function TimeContainer() {
     const [message, setMessage] = useState("");
     const [targetDvrTime, setTargetDvrTime] = useState(null);
 
+
     const handleCurrentTimeChange = (newValue) => { setCurrentTime(newValue); };
     const handleDvrTimeChange = (newValue) => { setDvrTime(newValue); };
     const handleTargetRealTimeChange = (newValue) => { setTargetRealTime(newValue); };
     const handleTargetDvrTimeChange = (newValue) => { setTargetDvrTime(newValue); };
+
 
     const ShowRealTimeInDvr = (currentTime, dvrTime, targetRealTime) => {
         const targetTime = calculateTargetDvrDiff(currentTime, dvrTime, targetRealTime);
@@ -71,8 +73,8 @@ function TimeContainer() {
 
                 <div className="buttons-group">
                     <button onClick={getCurrentTime}>Get Current Time</button>
-                    <button onClick={() => ShowRealTimeFromDvr(CurrentTime, DvrTime, targetDvrTime)}>Calculate Real Time</button>
                     <button onClick={() => ShowRealTimeInDvr(CurrentTime, DvrTime, targetRealTime)}>Calculate DVR Time</button>
+                    <button onClick={() => ShowRealTimeFromDvr(CurrentTime, DvrTime, targetDvrTime)}>Calculate Real Time</button>
                 </div>
 
                 <div className="results-group">
@@ -82,6 +84,8 @@ function TimeContainer() {
                     </p>
                     <p><strong>{message}</strong></p>
                 </div>
+
+
             </div>
         </div>
     );
