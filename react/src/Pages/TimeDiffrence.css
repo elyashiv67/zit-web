@@ -41,7 +41,29 @@
 .content-area {
     width: 100%;
     display: flex;
+    flex-direction: column;
     justify-content: center;
+    align-items: center;
+}
+
+.time-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+
+
+.red-line {
+    width: 40%;
+    height: 2px;
+    background-color: var(--primary-color);
+    margin: 2rem 0;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(228, 78, 76, 0.3);
+    transition: all var(--transition-normal);
 }
 
 @media (max-width: 600px) {
@@ -59,5 +81,10 @@
         padding: 1.2rem 1.5rem;
         font-size: 1.1rem;
         font-weight: 600;
+    }
+
+    .red-line {
+        margin-top: 3rem;
+        width: 50%;
     }
 }

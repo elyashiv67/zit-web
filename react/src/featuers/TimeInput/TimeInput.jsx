@@ -1,6 +1,6 @@
 import { TimeField } from '@mui/x-date-pickers/TimeField';
 
-function TimeInput({labelName , value , onTimeChange}) {
+function TimeInput({ labelName, value, onTimeChange }) {
 
     return (
         <div>
@@ -10,6 +10,11 @@ function TimeInput({labelName , value , onTimeChange}) {
                 format={"HH:mm:ss"}
                 value={value}
                 onChange={(newValue) => onTimeChange(newValue)}
+                slotProps={{
+                    actionBar: {
+                        actions: ['today', 'clear']
+                    }
+                }}
             />
         </div>
     );

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import TimeContainer from '../featuers/TimeContainer/TimeContainer.jsx';
 import DateContainer from '../featuers/DateContainer/DateContainer.jsx';
 import './TimeDiffrence.css';
+import LastSave from '../featuers/LastSave/LastSave.jsx';
 
 function TimeDiffrence() {
     const [activeTab, setActiveTab] = useState('time');
@@ -23,7 +24,13 @@ function TimeDiffrence() {
                 </button>
             </div>
             <div className="content-area">
-                {activeTab === 'time' ? <TimeContainer /> : <DateContainer />}
+                <div className="time-container">
+                    {activeTab === 'time' ? <TimeContainer /> : <DateContainer />}
+                </div>
+
+                <span className="red-line"></span>
+
+                <LastSave />
             </div>
         </div>
     );

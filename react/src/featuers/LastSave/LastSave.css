@@ -1,0 +1,54 @@
+.lastSave {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    margin: 2rem;
+    padding: 2rem;
+    background: var(--surface-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.lastSave-title {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0;
+    color: var(--primary-color);
+    letter-spacing: -0.02em;
+}
+
+.lastSave p {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.lastSave-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: 0 4px 12px rgba(213, 72, 69, 0.3);
+}
+
+.lastSave-btn:hover {
+    box-shadow: 0 6px 16px rgba(213, 72, 69, 0.4);
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.lastSave-btn:active {
+    transform: scale(0.97) translateY(0);
+}
+
+.lastSaveStrong {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}

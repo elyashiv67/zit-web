@@ -22,7 +22,7 @@ function TimeDiff(current, dvrTime) {
     return isNegative ? timeString : `- ${timeString}`;
 }
 
-function DateDiff(current, dvrTime) {
+function DateDiff(current, dvrTime, onlyDays = false) {
     if (!current || !dvrTime) {
         return "0 days 00:00:00";
     }
@@ -43,6 +43,9 @@ function DateDiff(current, dvrTime) {
 
     const DateString = `${totalDays} days ${hours}:${minutes}:${seconds}`;
 
+    if (onlyDays) {
+        return isNegative ? `- ${totalDays} days` : `${totalDays} days`;
+    }
     return isNegative ? `- ${DateString}` : DateString;
 }
 
