@@ -14,7 +14,7 @@ function DateInput({ labelName, value, onTimeChange, onlyDate = false }) {
                     views={["year", "month", "day"]}
                     slotProps={{
                         actionBar: {
-                            actions: ['today', 'clear']
+                            actions: ['today', 'cancel', 'accept']
                         }
                     }}
                 />
@@ -33,7 +33,7 @@ function DateInput({ labelName, value, onTimeChange, onlyDate = false }) {
                 views={["year", "month", "day", "hours", "minutes", "seconds"]}
                 slotProps={{
                     actionBar: {
-                        actions: ['today', 'clear']
+                        actions: ['today', 'cancel', 'accept']
                     }
                 }}
             />

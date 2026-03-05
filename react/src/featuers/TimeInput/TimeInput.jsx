@@ -12,7 +12,7 @@ function TimeInput({ labelName, value, onTimeChange }) {
                 onChange={(newValue) => onTimeChange(newValue)}
                 slotProps={{
                     actionBar: {
-                        actions: ['today', 'clear']
+                        actions: ['today', 'cancel', 'accept']
                     }
                 }}
             />
