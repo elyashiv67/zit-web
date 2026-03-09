@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import './TimeContainer.css';
 import TimeInput from "../TimeInput/TimeInput.jsx";
-import { TimeDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../HelpFunctions.js";
+import { TimeDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../JS/HelpFunctions.js";
+import { addToHistoryTime } from "../JS/HistoryFunctions.js";
 
 function TimeContainer() {
     const [CurrentTime, setCurrentTime] = useState(null);
@@ -20,7 +21,9 @@ function TimeContainer() {
     const ShowRealTimeInDvr = (currentTime, dvrTime, targetRealTime) => {
         const targetTime = calculateTargetDvrDiff(currentTime, dvrTime, targetRealTime);
         if (targetTime) {
-            setMessage(`Target DVR Time: ${targetTime.toLocaleTimeString()}`);
+            const newMessage = `Target DVR Time: ${targetTime.toLocaleTimeString()}`;
+            setMessage(newMessage);
+            addToHistoryTime({ id: Date.now(), currentTime, dvrTime, message: newMessage });
         } else {
             setMessage("Please fill in all time fields.");
         }
@@ -34,7 +37,9 @@ function TimeContainer() {
     const ShowRealTimeFromDvr = (currentTime, dvrTime, targetRealTime) => {
         const targetTime = calculateTargetRealTime(currentTime, dvrTime, targetRealTime);
         if (targetTime) {
-            setMessage(`Target Real Time: ${targetTime.toLocaleTimeString()}`);
+            const newMessage = `Target Real Time: ${targetTime.toLocaleTimeString()}`;
+            setMessage(newMessage);
+            addToHistoryTime({ id: Date.now(), currentTime, dvrTime, message: newMessage });
         } else {
             setMessage("Please fill in all time fields.");
         }

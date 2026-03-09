@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './LastSave.css';
 import DateInput from "../DateInput/DateInput.jsx";
-import { DateDiff } from "../HelpFunctions.js";
+import { DateDiff } from "../JS/HelpFunctions.js";
 
 function LastSave() {
     const [lastSave, setLastSave] = useState(null);

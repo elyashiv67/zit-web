@@ -66,6 +66,23 @@
     transition: all var(--transition-normal);
 }
 
+.history-container {
+    position: fixed;
+    right: 0;
+    top: 5rem;
+    height: 100vh;
+    width: 30vh;
+    background-color: aqua;
+    overflow-y: auto;
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: all var(--transition-normal);
+}
+
+.history-container.active {
+    transform: translateX(0);
+}
+
 @media (max-width: 600px) {
     .timeWrapper {
         padding: 1rem;

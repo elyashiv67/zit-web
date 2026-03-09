@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DateDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../HelpFunctions.js";
+import { DateDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../JS/HelpFunctions.js";
 import DateInput from "../DateInput/DateInput.jsx";
 import { format } from 'date-fns';
 import './DateContainer.css';
