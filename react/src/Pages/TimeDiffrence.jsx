@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TimeContainer from '../featuers/TimeContainer/TimeContainer.jsx';
 import DateContainer from '../featuers/DateContainer/DateContainer.jsx';
 import './TimeDiffrence.css';
 import LastSave from '../featuers/LastSave/LastSave.jsx';
 import HistoryContainerTime from '../featuers/HistoryContainerTime/HistoryContainerTime.jsx';
+import { getHistoryTime } from '../featuers/JS/HistoryFunctions.js';
 
 function TimeDiffrence() {
     const [activeTab, setActiveTab] = useState('time');
-    const [historyOpen, setHistoryOpen] = useState(false);
+    const [historyOpen, setHistoryOpen] = useState(true);
+    const [historyTime, setHistoryTime] = useState(() => getHistoryTime());
+
+    useEffect(() => {
+        const handleHistoryTimeUpdate = () => {
+            setHistoryTime(getHistoryTime());
+        };
+        window.addEventListener('historyTimeUpdated', handleHistoryTimeUpdate);
+        return () => {
+            window.removeEventListener('historyTimeUpdated', handleHistoryTimeUpdate);
+        };
+    }, []);
 
     return (
         <div className="timeWrapper">
@@ -32,7 +44,7 @@ function TimeDiffrence() {
                 {historyOpen ? 'Close History' : 'Open History'}
             </button>
             <div className={`history-container ${historyOpen ? 'active' : ''}`}>
-                <HistoryContainerTime />
+                <HistoryContainerTime historyTime={historyTime} />
             </div>
             <div className="content-area">
                 <div className="time-container">

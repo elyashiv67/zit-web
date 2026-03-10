@@ -76,7 +76,8 @@
     overflow-y: auto;
     z-index: 1000;
     transform: translateX(100%);
-    transition: all var(--transition-normal);
+    transition: ease-in-out 0.4s;
+    overflow: hidden;
 }
 
 .history-container.active {

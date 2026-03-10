@@ -4,8 +4,10 @@ function addToHistoryTime(newHistory) {
         const historyArray = JSON.parse(history);
         historyArray.push(newHistory);
         localStorage.setItem("historyTime", JSON.stringify(historyArray));
+        window.dispatchEvent(new Event('historyTimeUpdated'));
     } else {
         localStorage.setItem("historyTime", JSON.stringify([newHistory]));
+        window.dispatchEvent(new Event('historyTimeUpdated'));
     }
 }
 
