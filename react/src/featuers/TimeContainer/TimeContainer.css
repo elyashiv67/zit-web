@@ -230,7 +230,7 @@ button:active {
 
     .buttons-group {
         display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
+        grid-template-columns: 1fr !important;
         gap: 1rem;
     }
 

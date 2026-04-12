@@ -3,6 +3,7 @@ import { DateDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../He
 import DateInput from "../DateInput/DateInput.jsx";
 import { format } from 'date-fns';
 import './DateContainer.css';
+import Lastsave from '../Lastsave/Lastsave.jsx';
 
 function DateContainer() {
     const [currentDate, setCurrentDate] = useState(null);
@@ -45,40 +46,64 @@ function DateContainer() {
     return (
         <div className="page-wrapper">
             <div className="calculator-card">
-                <h1 className="card-title">Date Calculator</h1>
-                <DateInput
-                    labelName={"DVR Date"}
-                    value={dvrDate}
-                    onTimeChange={handleDvrDateChange}
-                />
+                <h1 className="card-title">Date Difference</h1>
 
-                <DateInput
-                    labelName={"Current Date"}
-                    value={currentDate}
-                    onTimeChange={handleCurrentDateChange}
-                />
+                <div className="inputs-group">
 
-                <DateInput
-                    labelName={"Target Real Date"}
-                    value={targetRealDate}
-                    onTimeChange={handleTargetRealDateChange}
-                />
+                    <div className="date-diff">
+                        <div className="date-diff-inputs">
+                            <DateInput
+                                labelName={"DVR Date"}
+                                value={dvrDate}
+                                onTimeChange={handleDvrDateChange}
+                            />
+                            <DateInput
+                                labelName={"Current Date"}
+                                value={currentDate}
+                                onTimeChange={handleCurrentDateChange}
+                            />
+                        </div>
+                        <div className="btn-date-diff">
+                            <button onClick={getCurrentDate}>Get Current Date</button>
+                        </div>
+                        <p>
+                            <strong>Date Difference:</strong>{' '}
+                            <span style={{ color: diffColor }}>{timeDiffResult}</span>
+                        </p>
+                    </div>
 
-                <DateInput
-                    labelName={"Target DVR Date"}
-                    value={targetDvrDate}
-                    onTimeChange={handleTargetDvrDateChange}
-                />
+                    <div className="red-line"></div>
 
-                <div className="buttons-group">
-                    <button onClick={getCurrentDate}>Get Current Date</button>
-                    <button onClick={() => ShowRealTimeFromDvr(currentDate, dvrDate, targetDvrDate)}>Calculate Real Date</button>
-                    <button onClick={() => ShowRealTimeInDvr(currentDate, dvrDate, targetRealDate)}>Calculate DVR Date</button>
-                </div>
+                    <Lastsave />
 
-                <div className="results-group">
-                    <p><strong>Date Difference:</strong> <span style={{ color: diffColor }}>{timeDiffResult}</span></p>
-                    <p><strong>{message}</strong></p>
+                    <div className="red-line"></div>
+
+                    <div className="date-clac">
+                        <h1 className="card-title">Calculator Date</h1>
+                        <div className="calc-inputs">
+                            <DateInput
+                                labelName={"Target Real Date"}
+                                value={targetRealDate}
+                                onTimeChange={handleTargetRealDateChange}
+                            />
+                            <DateInput
+                                labelName={"Target DVR Date"}
+                                value={targetDvrDate}
+                                onTimeChange={handleTargetDvrDateChange}
+                            />
+                        </div>
+
+                        <div className="buttons-group">
+                            <button onClick={() => ShowRealTimeInDvr(currentDate, dvrDate, targetRealDate)}>Calculate DVR Date</button>
+                            <button onClick={() => ShowRealTimeFromDvr(currentDate, dvrDate, targetDvrDate)}>Calculate Real Date</button>
+                        </div>
+
+                        <div className="results-group">
+                            <p><strong>calculated date:</strong>{' '}
+                                {message || "00:00:00"}</p>
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </div>
