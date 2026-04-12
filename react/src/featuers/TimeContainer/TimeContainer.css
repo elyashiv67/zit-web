@@ -1,21 +1,56 @@
-/* Main wrapper to center the card on the page */
 .page-wrapper {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    /* Align to top */
     min-height: 100vh;
     padding: 4rem 2rem;
     box-sizing: border-box;
 }
 
-/* The main card container for our calculator */
+.time-card-inputs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 1rem;
+}
+
+.time-card-inputs>div {
+    width: 70%;
+}
+
+.time-card .MuiFormControl-root {
+    width: 100%;
+}
+
+.time-card button {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: 1px solid var(--primary-color);
+    width: 70%;
+    margin: 0 auto;
+}
+
+.time-card button:hover {
+    background-color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.time-card p {
+    color: var(--text-color);
+    text-align: center;
+}
+
+.time-card p strong {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.2rem;
+}
+
 .calculator-card {
     background-color: var(--surface-color);
-    /* Using the dark slate for the card */
     border-radius: 16px;
-    /* Slightly more rounded */
-    /* refined multi-layer shadow for depth without harshness */
     box-shadow:
         0 10px 30px -5px rgba(0, 0, 0, 0.3),
         0 4px 10px -2px rgba(0, 0, 0, 0.1);
@@ -26,8 +61,12 @@
     flex-direction: column;
     gap: 1.5rem;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    /* Subtle border for definition */
     transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.calculator-card .calc-inputs .MuiFormControl-root {
+    width: 100%;
+    margin-bottom: 1rem;
 }
 
 .calculator-card:hover {
@@ -36,29 +75,69 @@
         0 8px 16px -4px rgba(0, 0, 0, 0.2);
 }
 
-/* Style for the title */
+.results-group p {
+    color: var(--text-color);
+    text-align: center;
+}
+
+.results-group strong {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.2rem;
+}
+
+
 .card-title {
     font-size: 1.75rem;
     font-weight: 700;
     text-align: center;
     margin: 0;
     color: var(--primary-color);
-    /* Red title */
     letter-spacing: -0.02em;
 }
 
-/* Grouping for the time inputs */
+
 .inputs-group {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1.5rem;
     align-items: center;
-    /* Center the inputs horizontally */
+    width: 100%;
+}
+
+.calc-inputs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.calc-inputs>div {
+    width: 70%;
+}
+
+.inner-card,
+.time-card,
+.calculate-card,
+.lastsave-card {
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    /* Same border as LastSave */
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        0 2px 4px rgba(0, 0, 0, 0.05);
+    /* Background shadow */
+    box-sizing: border-box;
 }
 
 
-
-/* Grouping for the buttons */
 .buttons-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -66,7 +145,18 @@
     margin-top: 0.5rem;
 }
 
-/* --- Button Styles --- */
+.calculate-card .buttons-group button:first-of-type {
+    color: var(--text-color);
+    background-color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.calculate-card .buttons-group button:first-of-type:hover {
+    background-color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    transform: translateY(-2px);
+}
+
 button {
     display: inline-flex;
     justify-content: center;
@@ -89,47 +179,7 @@ button:active {
     transform: scale(0.97);
 }
 
-/* Primary button style (Calculate) */
-.buttons-group button:last-of-type {
-    grid-column: span 2;
-    color: #fff;
-    /* Ensure white text */
-    background: linear-gradient(135deg, var(--primary-color) 0%, #B83C39 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(213, 72, 69, 0.3);
-}
 
-.buttons-group button:last-of-type:hover {
-    box-shadow: 0 6px 16px rgba(213, 72, 69, 0.4);
-    filter: brightness(1.1);
-    transform: translateY(-1px);
-}
-
-.buttons-group button:last-of-type:active {
-    transform: scale(0.97) translateY(0);
-}
-
-
-/* Secondary button style (Get Time) */
-.buttons-group button:first-of-type {
-    background-color: transparent;
-    color: var(--text-color);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.buttons-group button:first-of-type:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: var(--text-color);
-    transform: translateY(-1px);
-}
-
-.buttons-group button:first-of-type:active {
-    background-color: rgba(255, 255, 255, 0.08);
-    transform: scale(0.97);
-}
-
-
-/* --- Results Styles --- */
 .results-group {
     border-top: 1px solid var(--border-color);
     padding-top: 1.5rem;
@@ -179,8 +229,8 @@ button:active {
     }
 
     .buttons-group {
-        display: flex !important;
-        flex-direction: column !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
         gap: 1rem;
     }
 

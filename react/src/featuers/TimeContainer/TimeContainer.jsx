@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './TimeContainer.css';
 import TimeInput from "../TimeInput/TimeInput.jsx";
 import { TimeDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../HelpFunctions.js";
+import LastSave from "../LastSave/LastSave.jsx";
 
 function TimeContainer() {
     const [CurrentTime, setCurrentTime] = useState(null);
@@ -11,10 +12,18 @@ function TimeContainer() {
     const [targetDvrTime, setTargetDvrTime] = useState(null);
 
 
-    const handleCurrentTimeChange = (newValue) => { setCurrentTime(newValue); };
-    const handleDvrTimeChange = (newValue) => { setDvrTime(newValue); };
-    const handleTargetRealTimeChange = (newValue) => { setTargetRealTime(newValue); };
-    const handleTargetDvrTimeChange = (newValue) => { setTargetDvrTime(newValue); };
+    const handleCurrentTimeChange = (newValue) => {
+        setCurrentTime(newValue);
+    };
+    const handleDvrTimeChange = (newValue) => {
+        setDvrTime(newValue);
+    };
+    const handleTargetRealTimeChange = (newValue) => {
+        setTargetRealTime(newValue);
+    };
+    const handleTargetDvrTimeChange = (newValue) => {
+        setTargetDvrTime(newValue);
+    };
 
 
     const ShowRealTimeInDvr = (currentTime, dvrTime, targetRealTime) => {
@@ -46,43 +55,68 @@ function TimeContainer() {
     return (
         <div className="page-wrapper">
             <div className="calculator-card">
-                <h1 className="card-title">Time Calculator</h1>
+                <h1 className="card-title">Time Difference</h1>
 
                 <div className="inputs-group">
-                    <TimeInput
-                        labelName="DVR Time"
-                        value={DvrTime}
-                        onTimeChange={handleDvrTimeChange}
-                    />
-                    <TimeInput
-                        labelName="Current Time"
-                        value={CurrentTime}
-                        onTimeChange={handleCurrentTimeChange}
-                    />
-                    <TimeInput
-                        labelName="Target Real Time"
-                        value={targetRealTime}
-                        onTimeChange={handleTargetRealTimeChange}
-                    />
-                    <TimeInput
-                        labelName="Target DVR Time"
-                        value={targetDvrTime}
-                        onTimeChange={handleTargetDvrTimeChange}
-                    />
-                </div>
 
-                <div className="buttons-group">
-                    <button onClick={getCurrentTime}>Get Current Time</button>
-                    <button onClick={() => ShowRealTimeInDvr(CurrentTime, DvrTime, targetRealTime)}>Calculate DVR Time</button>
-                    <button onClick={() => ShowRealTimeFromDvr(CurrentTime, DvrTime, targetDvrTime)}>Calculate Real Time</button>
-                </div>
+                    <div className={"time-card"}>
+                        <div className="time-card-inputs">
+                            <TimeInput
+                                labelName="DVR Time"
+                                value={DvrTime}
+                                onTimeChange={handleDvrTimeChange}
+                            />
+                            <TimeInput
+                                labelName="Current Time"
+                                value={CurrentTime}
+                                onTimeChange={handleCurrentTimeChange}
+                            />
+                        </div>
+                        <button onClick={getCurrentTime}>Get Current Time</button>
+                        <p>
+                            <strong>Time Difference:</strong>{' '}
+                            <span style={{ color: diffColor }}>{timeDiffResult}</span>
+                        </p>
+                    </div>
 
-                <div className="results-group">
-                    <p>
-                        <strong>Time Difference:</strong>{' '}
-                        <span style={{ color: diffColor }}>{timeDiffResult}</span>
-                    </p>
-                    <p><strong>{message}</strong></p>
+                    <div className="red-line"></div>
+
+                    <LastSave />
+
+                    <div className="red-line"></div>
+
+
+                    <div className={"calculate-card"}>
+                        <h1 className="card-title">Calculator Time</h1>
+                        <div className="calc-inputs">
+                            <TimeInput
+                                labelName="Target Real Time"
+                                value={targetRealTime}
+                                onTimeChange={handleTargetRealTimeChange}
+                            />
+                            <TimeInput
+                                labelName="Target DVR Time"
+                                value={targetDvrTime}
+                                onTimeChange={handleTargetDvrTimeChange}
+                            />
+                        </div>
+                        <div className="buttons-group">
+                            <button onClick={() => ShowRealTimeInDvr(CurrentTime, DvrTime, targetRealTime)}>Calculate
+                                DVR Time
+                            </button>
+                            <button onClick={() => ShowRealTimeFromDvr(CurrentTime, DvrTime, targetDvrTime)}>Calculate
+                                Real Time
+                            </button>
+                        </div>
+
+                        <div className="results-group">
+                            <p><strong>calculated time:</strong>{' '}
+                                {message || "00:00:00"}</p>
+                        </div>
+
+                    </div>
+
+
                 </div>
 
 

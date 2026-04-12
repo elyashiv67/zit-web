@@ -91,14 +91,13 @@ button:active {
 }
 
 /* Primary button style (Calculate) */
-.buttons-group button:last-of-type {
+/* .buttons-group button:last-of-type {
     grid-column: span 2;
     color: #fff;
-    /* Ensure white text */
     background: linear-gradient(135deg, var(--primary-color) 0%, #B83C39 100%);
     border: none;
     box-shadow: 0 4px 12px rgba(213, 72, 69, 0.3);
-}
+} */
 
 .buttons-group button:last-of-type:hover {
     box-shadow: 0 6px 16px rgba(213, 72, 69, 0.4);

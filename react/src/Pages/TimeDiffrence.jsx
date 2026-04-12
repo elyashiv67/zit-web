@@ -27,10 +27,7 @@ function TimeDiffrence() {
                 <div className="time-container">
                     {activeTab === 'time' ? <TimeContainer /> : <DateContainer />}
                 </div>
-
                 <span className="red-line"></span>
-
-                <LastSave />
             </div>
         </div>
     );
