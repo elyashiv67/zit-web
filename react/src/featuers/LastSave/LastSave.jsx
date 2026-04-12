@@ -14,31 +14,27 @@ function LastSave() {
         setLastSaveResult(DateDiff(currentTime, lastSave, true));
     };
     return (
-        <div className="page-wrapper">
-            <div className="calculator-card">
-                <h1 className="card-title">Last Save Calculator</h1>
+        <div className="lastsave-card">
+            <h1 className="lastSave-title">Last Save Calculator</h1>
 
-                <div className="inputs-group">
-                    <DateInput
-                        labelName="Last Save"
-                        value={lastSave}
-                        onTimeChange={handleLastSaveChange}
-                        onlyDate={true}
-                    />
-                </div>
+            <div className="inputs-lastsave">
+                <DateInput
+                    labelName="Last Save"
+                    value={lastSave}
+                    onTimeChange={handleLastSaveChange}
+                    onlyDate={true}
+                />
+            </div>
 
-                <div className="buttons-group">
-                    <button onClick={calculateLastSave}>Calculate Last Save</button>
-                </div>
+            <div className="lastSave-btn">
+                <button onClick={calculateLastSave}>Calculate Last Save</button>
+            </div>
 
-                <div className="results-group">
-                    <p>
-                        <strong>Last Save:</strong>{' '}
-                        <span>{lastSaveResult}</span>
-                    </p>
-                </div>
-
-
+            <div className="results-group">
+                <p>
+                    <strong>Last Save:</strong>{' '}
+                    <span>{lastSaveResult}</span>
+                </p>
             </div>
         </div>
     );
