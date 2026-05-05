@@ -1,14 +1,18 @@
 import React from 'react';
 import { createBrowserRouter } from "react-router";
 import AppLayout from "../AppLayout/AppLayout.jsx";
-import TimeContainer from "../featuers/TimeContainer/TimeContainer.jsx";
-import DateContainer from "../featuers/DateContainer/DateContainer.jsx";
 import TimeDiffrence from "../Pages/TimeDiffrence.jsx";
+import { HistoryProvider } from "../Context/history/HistoryContext.jsx";
 
 const Router = createBrowserRouter([{
     element: <AppLayout />,
     children: [
-        { path: '/', element: <TimeDiffrence /> }
+        {
+            path: '/', element:
+                <HistoryProvider>
+                    <TimeDiffrence />
+                </HistoryProvider>
+        }
     ]
 }], { basename: '/zit-web/' })
 

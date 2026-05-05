@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import './HistoryContainerTime.css';
 import HistoryItemTime from "../HistoryItemTime/HistoryItemTime.jsx";
+import { HistoryContext } from "../../Context/history/HistoryContext.jsx";
 
-function HistoryContainerTime({ historyTime }) {
+function HistoryContainerTime() {
+    const { historyTime, setHistoryTime } = useContext(HistoryContext);
     return (
         <div className="history-wrapper">
-            {historyTime.map((historyItem, index) => (
-                <HistoryItemTime key={index} history={historyItem} />
+            {historyTime.map((historyItem) => (
+                <HistoryItemTime key={historyItem.id} history={historyItem} />
             ))}
         </div>
     );

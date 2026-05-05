@@ -8,7 +8,7 @@ import { getHistoryTime } from '../featuers/JS/HistoryFunctions.js';
 
 function TimeDiffrence() {
     const [activeTab, setActiveTab] = useState('time');
-    const [historyOpen, setHistoryOpen] = useState(true);
+    const [historyOpen, setHistoryOpen] = useState(false);
     const [historyTime, setHistoryTime] = useState(() => getHistoryTime());
 
     useEffect(() => {

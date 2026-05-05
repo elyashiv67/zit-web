@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import './TimeContainer.css';
 import TimeInput from "../TimeInput/TimeInput.jsx";
 import { TimeDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../JS/HelpFunctions.js";
-import { addToHistoryTime } from "../JS/HistoryFunctions.js";
+import { HistoryContext } from "../../Context/history/HistoryContext.jsx";
 
 function TimeContainer() {
+    const { selectedHistoryTime } = useContext(HistoryContext);
     const [CurrentTime, setCurrentTime] = useState(null);
     const [DvrTime, setDvrTime] = useState(null);
     const [targetRealTime, setTargetRealTime] = useState(null);
     const [message, setMessage] = useState("");
     const [targetDvrTime, setTargetDvrTime] = useState(null);
+    const { addHistoryTimeContext } = useContext(HistoryContext);
 
 
     const handleCurrentTimeChange = (newValue) => { setCurrentTime(newValue); };
@@ -23,7 +25,7 @@ function TimeContainer() {
         if (targetTime) {
             const newMessage = `Target DVR Time: ${targetTime.toLocaleTimeString()}`;
             setMessage(newMessage);
-            addToHistoryTime({ id: Date.now(), currentTime, dvrTime, message: newMessage });
+            addHistoryTimeContext({ id: Date.now(), currentTime, dvrTime, message: newMessage });
         } else {
             setMessage("Please fill in all time fields.");
         }
@@ -39,7 +41,7 @@ function TimeContainer() {
         if (targetTime) {
             const newMessage = `Target Real Time: ${targetTime.toLocaleTimeString()}`;
             setMessage(newMessage);
-            addToHistoryTime({ id: Date.now(), currentTime, dvrTime, message: newMessage });
+            addHistoryTimeContext({ id: Date.now(), currentTime, dvrTime, message: newMessage });
         } else {
             setMessage("Please fill in all time fields.");
         }
@@ -47,6 +49,26 @@ function TimeContainer() {
 
     const timeDiffResult = TimeDiff(CurrentTime, DvrTime);
     const diffColor = timeDiffResult === "00:00:00" ? "inherit" : (timeDiffResult.includes("-") ? "red" : "green");
+
+    useEffect(() => {
+        if (selectedHistoryTime) {
+            if (selectedHistoryTime.currentTime) {
+                setCurrentTime(new Date(selectedHistoryTime.currentTime));
+            }
+            if (selectedHistoryTime.dvrTime) {
+                setDvrTime(new Date(selectedHistoryTime.dvrTime));
+            }
+            if (selectedHistoryTime.targetRealTime) {
+                setTargetRealTime(new Date(selectedHistoryTime.targetRealTime));
+            }
+            if (selectedHistoryTime.targetDvrTime) {
+                setTargetDvrTime(new Date(selectedHistoryTime.targetDvrTime));
+            }
+            if (selectedHistoryTime.message) {
+                setMessage(selectedHistoryTime.message);
+            }
+        }
+    }, [selectedHistoryTime]);
 
     return (
         <div className="page-wrapper">
