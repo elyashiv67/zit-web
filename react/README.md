@@ -1,16 +1,16 @@
-# React + Vite
+🕒 DVR Time Offset Calculator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A dedicated utility within ZitWeb designed to calculate the precise time drift between a DVR (Digital Video Recorder) system's internal clock and actual real-world time.
+This is an essential tool for accurately aligning exported surveillance footage with real-world events.
 
-Currently, two official plugins are available:
+✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Full Date & Time Offset: Computes the exact time discrepancy when both the date and the clock on the DVR are out of sync with reality.
 
-## React Compiler
+Time-Only Calculation: A streamlined mode to quickly calculate the hour/minute/second difference when the DVR's date is correct but the internal clock has drifted.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Accurate Delta Output: Provides the exact time delta needed to accurately correct timestamps on your exported video files.
 
-## Expanding the ESLint configuration
+🎯 Use Cases
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Perfect for forensic video analysis, syncing multiple camera angles, or general CCTV management where maintaining an accurate timeline is critical, but the hardware's internal sync has drifted.
