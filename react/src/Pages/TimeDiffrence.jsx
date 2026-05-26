@@ -5,11 +5,12 @@ import './TimeDiffrence.css';
 import LastSave from '../featuers/LastSave/LastSave.jsx';
 
 function TimeDiffrence() {
-    const [activeTab, setActiveTab] = useState('time');
+    const [activeTab, setActiveTab] = useState('date');
 
     return (
         <div className="timeWrapper">
-            <div className="toggle-container">
+            {/* disabled the pick between tabs caus right now we just work with dates */}
+            {/* <div className="toggle-container">
                 <button
                     className={`toggle-btn ${activeTab === 'time' ? 'active' : ''}`}
                     onClick={() => setActiveTab('time')}
@@ -22,7 +23,7 @@ function TimeDiffrence() {
                 >
                     Date Diff
                 </button>
-            </div>
+            </div> */}
             <div className="content-area">
                 <div className="time-container">
                     {activeTab === 'time' ? <TimeContainer /> : <DateContainer />}
