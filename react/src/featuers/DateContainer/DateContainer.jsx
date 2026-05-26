@@ -4,7 +4,7 @@ import DateInput from "../DateInput/DateInput.jsx";
 import { format } from 'date-fns';
 import './DateContainer.css';
 import Lastsave from "../LastSave/LastSave.jsx";
-import DateInputHtml5 from "../DateInput/DateInputHtml5.jsx";
+import ScrollInput from "../scroll input/ScrollInput.jsx";
 
 function DateContainer() {
     const [currentDate, setCurrentDate] = useState(null);
@@ -58,12 +58,12 @@ function DateContainer() {
                                 value={dvrDate}
                                 onTimeChange={handleDvrDateChange}
                             /> */}
-                            <DateInputHtml5
+                            <ScrollInput
                                 labelName={"DVR Time"}
                                 value={dvrDate}
                                 onTimeChange={handleDvrDateChange}
                             />
-                            <DateInputHtml5
+                            <ScrollInput
                                 labelName={"Current Date"}
                                 value={currentDate}
                                 onTimeChange={handleCurrentDateChange}

@@ -1,7 +1,7 @@
-import "./DateInputHtml5.css";
+import "./ScrollInput.css";
 
 
-function TimeInputHtml5({ labelName, value, onTimeChange, type = "datetime-local" }) {
+function ScrollInput({ labelName, value, onTimeChange, type = "datetime-local" }) {
     const formattedValue = (value) => {
         if (!value) return "";
         const date = new Date(value);
@@ -38,4 +38,4 @@ function TimeInputHtml5({ labelName, value, onTimeChange, type = "datetime-local
         </div>
     );
 }
-export default TimeInputHtml5;
+export default ScrollInput;
