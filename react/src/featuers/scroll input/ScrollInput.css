@@ -17,7 +17,8 @@
     color: #fff;
     font-size: 16px;
     outline: none;
-    width: 13rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* .date-input::-webkit-calendar-picker-indicator {

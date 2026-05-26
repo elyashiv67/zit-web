@@ -47,7 +47,7 @@ function DateContainer() {
     return (
         <div className="page-wrapper">
             <div className="calculator-card">
-                <h1 className="card-title">Date Difference</h1>
+                <h1 className="card-title">הפרש זמנים</h1>
 
                 <div className="inputs-group">
 
@@ -59,12 +59,12 @@ function DateContainer() {
                                 onTimeChange={handleDvrDateChange}
                             /> */}
                             <ScrollInput
-                                labelName={"DVR Time"}
+                                labelName={"DVR זמן"}
                                 value={dvrDate}
                                 onTimeChange={handleDvrDateChange}
                             />
                             <ScrollInput
-                                labelName={"Current Date"}
+                                labelName={"זמן אמת"}
                                 value={currentDate}
                                 onTimeChange={handleCurrentDateChange}
                             />
