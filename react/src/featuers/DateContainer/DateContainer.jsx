@@ -3,7 +3,8 @@ import { DateDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../He
 import DateInput from "../DateInput/DateInput.jsx";
 import { format } from 'date-fns';
 import './DateContainer.css';
-import Lastsave from '../Lastsave/Lastsave.jsx';
+import Lastsave from "../LastSave/LastSave.jsx";
+import DateInputHtml5 from "../DateInput/DateInputHtml5.jsx";
 
 function DateContainer() {
     const [currentDate, setCurrentDate] = useState(null);
@@ -52,16 +53,26 @@ function DateContainer() {
 
                     <div className="date-diff">
                         <div className="date-diff-inputs">
-                            <DateInput
+                            {/* <DateInput
                                 labelName={"DVR Date"}
                                 value={dvrDate}
                                 onTimeChange={handleDvrDateChange}
+                            /> */}
+                            <DateInputHtml5
+                                labelName={"DVR Time"}
+                                value={dvrDate}
+                                onTimeChange={handleDvrDateChange}
                             />
-                            <DateInput
+                            <DateInputHtml5
                                 labelName={"Current Date"}
                                 value={currentDate}
                                 onTimeChange={handleCurrentDateChange}
                             />
+                            {/* <DateInput
+                                labelName={"Current Date"}
+                                value={currentDate}
+                                onTimeChange={handleCurrentDateChange}
+                            /> */}
                         </div>
                         <div className="btn-date-diff">
                             <button onClick={getCurrentDate}>Get Current Date</button>
