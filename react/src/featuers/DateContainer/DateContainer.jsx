@@ -41,7 +41,7 @@ function DateContainer() {
     }
 
     const timeDiffResult = DateDiff(currentDate, dvrDate);
-    const diffColor = (timeDiffResult === "0 days 00:00:00") ? "inherit" : (timeDiffResult.includes("-") ? "red" : "green");
+    const diffColor = (timeDiffResult === "0 ימים\n00:00:00") ? "inherit" : (timeDiffResult.includes("-") ? "red" : "green");
 
 
     return (
@@ -75,11 +75,11 @@ function DateContainer() {
                             /> */}
                         </div>
                         <div className="btn-date-diff">
-                            <button onClick={getCurrentDate}>Get Current Date</button>
+                            <button onClick={getCurrentDate}>הוספת זמן נוכחי</button>
                         </div>
                         <p>
-                            <strong>Date Difference:</strong>{' '}
-                            <span style={{ color: diffColor }}>{timeDiffResult}</span>
+                            <strong>: הפרש זמנים</strong>{' '} <br />
+                            <span className="diff-message" style={{ color: diffColor }}>{timeDiffResult}</span>
                         </p>
                     </div>
 

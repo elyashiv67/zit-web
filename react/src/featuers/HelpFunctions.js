@@ -24,7 +24,7 @@ function TimeDiff(current, dvrTime) {
 
 function DateDiff(current, dvrTime, onlyDays = false) {
     if (!current || !dvrTime) {
-        return "0 days 00:00:00";
+        return "0 ימים\n00:00:00";
     }
 
     const isNegative = differenceInMilliseconds(current, dvrTime) < 0;
@@ -41,10 +41,10 @@ function DateDiff(current, dvrTime, onlyDays = false) {
     const minutes = pad(duration.minutes || 0);
     const seconds = pad(duration.seconds || 0);
 
-    const DateString = `${totalDays} days ${hours}:${minutes}:${seconds}`;
+    const DateString = `${totalDays} ימים\n${hours}:${minutes}:${seconds}`;
 
     if (onlyDays) {
-        return isNegative ? `- ${totalDays} days` : `${totalDays} days`;
+        return isNegative ? `- ${totalDays} ימים` : `${totalDays} ימים`;
     }
     return isNegative ? `- ${DateString}` : DateString;
 }
