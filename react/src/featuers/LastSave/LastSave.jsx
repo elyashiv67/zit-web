@@ -15,7 +15,7 @@ function LastSave() {
             const currentTime = new Date();
             setLastSaveResult(DateDiff(currentTime, lastSave, true));
         } else {
-            setLastSaveResult("");
+            setLastSaveResult("-----");
         }
     }, [lastSave]);
 
@@ -40,7 +40,7 @@ function LastSave() {
 
             <div className="results-group">
                 <p>
-                    <strong>Last Save:</strong>{' '}
+                    <strong>: הפרש מהשמירה האחרונה</strong>{' '}<br />
                     <span>{lastSaveResult}</span>
                 </p>
             </div>

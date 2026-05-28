@@ -42,7 +42,7 @@ function DateContainer() {
 
     const timeDiffResult = DateDiff(currentDate, dvrDate);
     const diffColor = (timeDiffResult === "0 ימים\n00:00:00") ? "inherit" : (timeDiffResult.includes("-") ? "red" : "green");
-
+    const displayResultDiff = (currentDate && dvrDate) ? timeDiffResult : "-----";
 
     return (
         <div className="page-wrapper">
@@ -79,7 +79,7 @@ function DateContainer() {
                         </div>
                         <p>
                             <strong>: הפרש זמנים</strong>{' '} <br />
-                            <span className="diff-message" style={{ color: diffColor }}>{timeDiffResult}</span>
+                            <span className="diff-message" style={{ color: diffColor }}>{displayResultDiff}</span>
                         </p>
                     </div>
 
@@ -121,7 +121,7 @@ function DateContainer() {
 
                         <div className="results-group" style={{ direction: "rtl" }}>
                             <p><strong>תוצאה :</strong>{' '}<br />
-                                {message || "00:00:00"}</p>
+                                {message || "-----"}</p>
                         </div>
 
                     </div>
