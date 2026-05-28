@@ -16,7 +16,7 @@
 }
 
 .date-diff-inputs>div {
-    width: 70%;
+    width: 90%;
 }
 
 .date-diff .MuiFormControl-root {
@@ -52,6 +52,13 @@
     color: var(--primary-color);
     font-weight: 600;
     font-size: 1.2rem;
+}
+
+.diff-message {
+    direction: rtl;
+    font-size: 1.3rem;
+    font-weight: 700;
+    white-space: pre-line;
 }
 
 .calculator-card {
@@ -120,7 +127,7 @@
 }
 
 .calc-inputs>div {
-    width: 70%;
+    width: 90%;
 }
 
 .inner-card,

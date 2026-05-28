@@ -46,6 +46,10 @@
     width: 100%;
 }
 
+.inputs-lastsave>* {
+    width: 85%;
+}
+
 .lastSave-btn {
     display: flex;
     justify-content: center;

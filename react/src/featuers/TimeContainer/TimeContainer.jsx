@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './TimeContainer.css';
 import TimeInput from "../TimeInput/TimeInput.jsx";
+import TimeInputHtml5 from "../TimeInput/TimeInputHtml5.jsx";
 import { TimeDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../HelpFunctions.js";
 import LastSave from "../LastSave/LastSave.jsx";
 
@@ -62,6 +63,11 @@ function TimeContainer() {
                     <div className={"time-card"}>
                         <div className="time-card-inputs">
                             <TimeInput
+                                labelName="DVR Time"
+                                value={DvrTime}
+                                onTimeChange={handleDvrTimeChange}
+                            />
+                            <TimeInputHtml5
                                 labelName="DVR Time"
                                 value={DvrTime}
                                 onTimeChange={handleDvrTimeChange}
