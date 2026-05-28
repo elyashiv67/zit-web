@@ -3,7 +3,7 @@ import { DateDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../He
 import DateInput from "../DateInput/DateInput.jsx";
 import { format } from 'date-fns';
 import './DateContainer.css';
-import Lastsave from "../LastSave/LastSave.jsx";
+import LastSave from "../LastSave/LastSave.jsx";
 import ScrollInput from "../scroll input/ScrollInput.jsx";
 
 function DateContainer() {
@@ -21,7 +21,7 @@ function DateContainer() {
     const ShowRealTimeInDvr = (currentDate, dvrDate, targetRealDate) => {
         const targetDate = calculateTargetDvrDiff(currentDate, dvrDate, targetRealDate);
         if (targetDate) {
-            setMessage(`Target DVR Time: ${format(targetDate, "dd/MM/yyyy HH:mm:ss")}`);
+            setMessage(`הזמן בDVR הוא: ${format(targetDate, "dd/MM/yyyy HH:mm:ss")}`);
         } else {
             setMessage("Please fill in all time fields.");
         }
@@ -34,7 +34,7 @@ function DateContainer() {
     const ShowRealTimeFromDvr = (currentDate, dvrDate, targetDvrDate) => {
         const targetDate = calculateTargetRealTime(currentDate, dvrDate, targetDvrDate);
         if (targetDate) {
-            setMessage(`Target Real Time: ${format(targetDate, "dd/MM/yyyy HH:mm:ss")}`);
+            setMessage(`הזמן בDVR הוא: ${format(targetDate, "dd/MM/yyyy HH:mm:ss")}`);
         } else {
             setMessage("Please fill in all time fields.");
         }
@@ -85,32 +85,42 @@ function DateContainer() {
 
                     <div className="red-line"></div>
 
-                    <Lastsave />
+                    <LastSave />
 
                     <div className="red-line"></div>
 
                     <div className="date-clac">
-                        <h1 className="card-title">Calculator Date</h1>
+                        <h1 className="card-title">חישוב זמן אירוע</h1>
                         <div className="calc-inputs">
-                            <DateInput
+                            {/* <DateInput
                                 labelName={"Target Real Date"}
                                 value={targetRealDate}
                                 onTimeChange={handleTargetRealDateChange}
+                            /> */}
+                            <ScrollInput
+                                labelName={"זמן אמת"}
+                                value={targetRealDate}
+                                onTimeChange={handleTargetRealDateChange}
                             />
-                            <DateInput
+                            {/* <DateInput
                                 labelName={"Target DVR Date"}
+                                value={targetDvrDate}
+                                onTimeChange={handleTargetDvrDateChange}
+                            /> */}
+                            <ScrollInput
+                                labelName={"זמן DVR"}
                                 value={targetDvrDate}
                                 onTimeChange={handleTargetDvrDateChange}
                             />
                         </div>
 
                         <div className="buttons-group">
-                            <button onClick={() => ShowRealTimeInDvr(currentDate, dvrDate, targetRealDate)}>Calculate DVR Date</button>
-                            <button onClick={() => ShowRealTimeFromDvr(currentDate, dvrDate, targetDvrDate)}>Calculate Real Date</button>
+                            <button onClick={() => ShowRealTimeInDvr(currentDate, dvrDate, targetRealDate)}>הצג לפי זמן אמת</button>
+                            <button onClick={() => ShowRealTimeFromDvr(currentDate, dvrDate, targetDvrDate)} style={{ direction: "rtl" }}>הצג לפי זמן DVR</button>
                         </div>
 
-                        <div className="results-group">
-                            <p><strong>calculated date:</strong>{' '}
+                        <div className="results-group" style={{ direction: "rtl" }}>
+                            <p><strong>תוצאה :</strong>{' '}<br />
                                 {message || "00:00:00"}</p>
                         </div>
 

@@ -10,6 +10,11 @@ function ScrollInput({ labelName, value, onTimeChange, type = "datetime-local" }
         const year = date.getFullYear();
         const month = pad(date.getMonth() + 1);
         const day = pad(date.getDate());
+
+        if (type === "date") {
+            return `${year}-${month}-${day}`;
+        }
+
         const hours = pad(date.getHours());
         const minutes = pad(date.getMinutes());
         const seconds = pad(date.getSeconds());
@@ -19,7 +24,14 @@ function ScrollInput({ labelName, value, onTimeChange, type = "datetime-local" }
     const handleChange = (e) => {
         const dateTimeString = e.target.value;
         if (dateTimeString) {
-            const updatedDate = new Date(dateTimeString);
+            let updatedDate;
+            if (type === "date") {
+                const [year, month, day] = dateTimeString.split('-');
+                updatedDate = new Date();
+                updatedDate.setFullYear(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+            } else {
+                updatedDate = new Date(dateTimeString);
+            }
             onTimeChange(updatedDate);
         } else {
             onTimeChange(null);
