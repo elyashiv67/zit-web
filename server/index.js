@@ -2,6 +2,7 @@ import express from 'express';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import db_connect from './config/db_config.js';
+import mainRoutes from './routes/Main_R.js';
 
 dotenv.config();
 const app = express();
@@ -13,7 +14,7 @@ const api = process.env.HOST;
 
 
 
-
+app.use('/' , mainRoutes);
 
 
 const start = async () => {
