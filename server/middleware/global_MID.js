@@ -10,4 +10,4 @@ function ValidId(req, res, next) {
 }
 
 
-export { ValidId };
+export {ValidId};
