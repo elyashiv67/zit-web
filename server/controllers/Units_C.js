@@ -1,4 +1,5 @@
 import Unit from '../modules/units.js';
+import User from '../modules/users.js';
 
 async function getAllUnits(req, res) {
     try {
@@ -73,6 +74,12 @@ async function updateUnit(req, res) {
 async function deleteUnit(req, res) {
     try {
         const id = req.valid_id;
+
+        const inUse = await User.exists({unit: id});
+        if (inUse) {
+            return res.status(409).json({message: 'Cannot delete unit: still assigned to one or more users'});
+        }
+
         const deletedUnit = await Unit.findByIdAndDelete(id);
 
         if (!deletedUnit)

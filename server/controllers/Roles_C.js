@@ -1,4 +1,5 @@
 import Role from "../modules/roles.js";
+import User from "../modules/users.js";
 
 async function getAllRoles(req, res) {
     try {
@@ -70,11 +71,17 @@ async function updateRole(req, res) {
 async function deleteRole(req, res) {
     try {
         const id = req.valid_id;
+
+        const inUse = await User.exists({role: id});
+        if (inUse) {
+            return res.status(409).json({message: 'Cannot delete role: still assigned to one or more users'});
+        }
+
         const deletedRole = await Role.findByIdAndDelete(id, {});
         if (!deletedRole) {
             return res.status(404).json({message: 'Role not found'});
         }
-        res.status(201).json({
+        res.status(200).json({
             message: 'Role deleted successfully',
             role: deletedRole
         });

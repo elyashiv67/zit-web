@@ -1,13 +1,15 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import {EncNumber, DecryptNumber} from "../environment/Auth_ENV.js";
-import {getUserById_auth, getUserByName_auth} from "../controllers/Users_C.js";
+import {getUserById_auth, getUserByName_auth} from "../controllers/Auth_C.js";
 
 const cookieName = 'zit-auth';
 
 function EncWithSalt(str) {
     return bcrypt.hash(str, 10);
 }
+
+
 
 async function CheckLogin(req, res, next) {
     try {
@@ -75,8 +77,7 @@ async function LogInByCookie(req, res, next) {
 
 async function LogInByPass(req, res) {
     try {
-        const uname = req.body.username;
-        const userPass = req.body.password;
+        const {uname , userPass} = req.validLoginValues;
 
         let user = await getUserByName_auth(uname);
         if (!user) {
@@ -203,3 +204,18 @@ async function LogIn(req, res) {
         return false
     }
 }
+
+async function LogOut(req, res) {
+    try {
+        req.session.destroy();
+        res.clearCookie(cookieName);
+
+        res.status(200).json({message: "Logged out successfully"});
+    } catch (e) {
+        res.status(500).json({ message: `Server error: ${e.message}` });
+    }
+}
+
+
+
+export {CheckLogin, LogInByPass, LogOut}
