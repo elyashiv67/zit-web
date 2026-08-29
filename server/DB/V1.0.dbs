@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="zit_db" database="MongoDb" id="944ce9a1-e597-4f7d-a870-f4905a5f8d0a" >
+	<schema name="zit" >
+		<table name="pins" prior="pins+" >
+			<column name="_id" type="objectId" mandatory="y" />
+			<column name="name" type="string" />
+			<column name="location" prior="map_pin" type="object" >
+				<comment><![CDATA[[ lat:"" , lng:"" ]]]></comment>
+				<column name="lat" type="double" mandatory="y" />
+				<column name="lng" type="double" mandatory="y" />
+			</column>
+			<column name="images" type="array[string]" >
+				<comment><![CDATA[[ path to images ]]]></comment>
+			</column>
+			<column name="dvr_un" type="string" />
+			<column name="dvr_pass" type="string" />
+			<column name="assigned_unit" type="objectId" />
+			<column name="address" type="string" />
+			<column name="place_id" type="string" />
+			<index name="_id_" unique="PRIMARY_KEY" >
+				<column name="_id" />
+			</index>
+			<fk name="fk_pins_units" virtual="y" to_schema="zit" to_table="units" >
+				<fk_column name="assigned_unit" pk="_id" />
+			</fk>
+		</table>
+		<table name="roles" prior="role" >
+			<column name="_id" type="objectId" mandatory="y" />
+			<column name="name" type="string" />
+			<column name="role" type="objectId" />
+			<index name="_id_" unique="PRIMARY_KEY" >
+				<column name="_id" />
+			</index>
+		</table>
+		<table name="time_diff" prior="time_di" >
+			<column name="_id" type="objectId" mandatory="y" />
+			<column name="assigned_unit" prior="unit" type="objectId" />
+			<column name="real_time" type="date" />
+			<column name="dvr_time" type="date" />
+			<column name="offset_Ms" type="date" />
+			<column name="dvr_lastSave" type="date" />
+			<column name="created_at" type="date" />
+			<index name="_id_" unique="PRIMARY_KEY" >
+				<column name="_id" />
+			</index>
+			<fk name="fk_time_diff_units" virtual="y" to_schema="zit" to_table="units" >
+				<fk_column name="assigned_unit" pk="_id" />
+			</fk>
+		</table>
+		<table name="units" prior="unit" >
+			<column name="_id" type="objectId" mandatory="y" />
+			<column name="name" type="string" />
+			<column name="district" prior="diistrict" type="string" />
+			<index name="_id_" unique="PRIMARY_KEY" >
+				<column name="_id" />
+			</index>
+		</table>
+		<table name="users" prior="use" >
+			<column name="_id" type="objectId" mandatory="y" />
+			<column name="name" type="string" />
+			<column name="user_name" type="string" />
+			<column name="pass" type="string" />
+			<column name="id" type="string" />
+			<column name="police_id" type="string" />
+			<column name="role" type="objectId" />
+			<column name="unit" type="objectId" />
+			<index name="_id_" unique="PRIMARY_KEY" >
+				<column name="_id" />
+			</index>
+			<fk name="fk_users_units" virtual="y" to_schema="zit" to_table="units" >
+				<fk_column name="unit" pk="_id" />
+			</fk>
+			<fk name="fk_users_roles" virtual="y" to_schema="zit" to_table="roles" >
+				<fk_column name="role" pk="role" />
+			</fk>
+		</table>
+	</schema>
+	<diagram_group name="Default" id="65cdbef9-ca5e-4059-a1ba-277403d74c99" >
+		<diagram name="Default Diagram" id="39bd464b-adc9-40cd-b16c-902e46e94411" show_relation="columns" >
+			<entity schema="zit" name="pins" color="EEC1C1" x="931" y="228" >
+				<column name="_id" />
+				<column name="name" />
+				<column name="location" expanded="y" />
+				<column name="location.lat" />
+				<column name="location.lng" />
+				<column name="images" />
+				<column name="dvr_un" />
+				<column name="dvr_pass" />
+				<column name="assigned_unit" />
+				<column name="address" />
+				<column name="place_id" />
+			</entity>
+			<entity schema="zit" name="roles" color="C1D8EE" x="342" y="608" />
+			<entity schema="zit" name="time_diff" color="C1D8EE" x="931" y="513" />
+			<entity schema="zit" name="units" color="C1D8EE" x="361" y="190" />
+			<entity schema="zit" name="users" color="C1D8EE" x="342" y="342" />
+			<callout x="57" y="57" pointer="Round" >
+				<comment><![CDATA[- Right-click the diagram to create new tables. 
+- Double-click table headers to edit. 
+- Get a better understanding of the schema by creating multiple diagrams.
+- Save the design to the model file, and deploy from 'Schema / Create into the database'.]]></comment>
+			</callout>
+		</diagram>
+	</diagram_group>
+</project>
