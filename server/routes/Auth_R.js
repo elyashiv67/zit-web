@@ -8,6 +8,7 @@ const router = express.Router();
 router.post("/login",ValidateLogin ,LogInByPass);
 router.post("/logout", LogOut);
 router.post("/register",CheckLogin, isAdmin, ValidateRegister, registerUser);
+router.post('/reg',ValidateRegister,registerUser);
 
 
 

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 function ValidId(req, res, next) {
-    const id = req.body.id || req.params.id;
+    const id = req.params.id || req.body.id;
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(401).json({message: `id is not valid`});
     }
@@ -35,7 +35,7 @@ function ValidateLogin(req, res, next) {
 
         next();
     } catch (err) {
-        res.status(500).json({message: `Server error: ${err.message}`});
+        return res.status(500).json({message: `Server error: ${err.message}`});
     }
 }
 
@@ -86,7 +86,7 @@ function ValidateRegister(req, res, next) {
 
         next();
     } catch (err) {
-        res.status(500).json({message: `Server error: ${err.message}`});
+        return res.status(500).json({message: `Server error: ${err.message}`});
     }
 }
 
@@ -123,7 +123,7 @@ function ValidateUpdate(req, res, next) {
         req.validUpdateValues = updates;
         next();
     } catch (err) {
-        res.status(500).json({message: `Server error: ${err.message}`});
+        return res.status(500).json({message: `Server error: ${err.message}`});
     }
 }
 
@@ -137,4 +137,8 @@ function isSelfOrAdmin(req, res, next) {
     return res.status(403).json({message: `user is not authorized`});
 }
 
-export {ValidId , ValidateLogin, ValidateRegister, ValidateUpdate, isAdmin, isSelfOrAdmin};
+function ValidObjectId(id){
+    return mongoose.Types.ObjectId.isValid(id);
+}
+
+export {ValidId , ValidateLogin, ValidateRegister, ValidateUpdate, isAdmin, isSelfOrAdmin, ValidObjectId};

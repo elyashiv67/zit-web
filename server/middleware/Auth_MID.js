@@ -40,7 +40,7 @@ async function CheckLogin(req, res, next) {
         next();
     } catch (err) {
         console.log(err);
-        res.status(500).json({error: "server error in checkLogin"});
+        return res.status(500).json({error: "server error in checkLogin"});
     }
 }
 
@@ -95,11 +95,11 @@ async function LogInByPass(req, res) {
 
 
         // console.log(req.session.user_email);
-        res.status(200).json({message: "Successfully logged in"});
+        return res.status(200).json({message: "Successfully logged in"});
 
     } catch (err) {
         console.log(`in loginByPass : ${err}`);
-        res.status(500).json({message: "Something went wrong in LogInByPass"});
+        return res.status(500).json({message: "Something went wrong in LogInByPass"});
     }
 
 }
@@ -210,9 +210,9 @@ async function LogOut(req, res) {
         req.session.destroy();
         res.clearCookie(cookieName);
 
-        res.status(200).json({message: "Logged out successfully"});
+        return res.status(200).json({message: "Logged out successfully"});
     } catch (e) {
-        res.status(500).json({ message: `Server error: ${e.message}` });
+        return res.status(500).json({ message: `Server error: ${e.message}` });
     }
 }
 

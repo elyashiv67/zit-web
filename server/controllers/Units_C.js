@@ -8,9 +8,9 @@ async function getAllUnits(req, res) {
         if (units.length === 0)
             return res.status(404).json({message: 'No units found'});
 
-        res.status(200).json(units);
+        return res.status(200).json(units);
     } catch (e) {
-        res.status(500).json({message: `Server error: ${e.message}`});
+        return res.status(500).json({message: `Server error: ${e.message}`});
     }
 }
 
@@ -22,9 +22,9 @@ async function getUnitById(req, res) {
         if (!unit)
             return res.status(404).json({message: `no unit found`});
 
-        res.status(200).json(unit);
+        return res.status(200).json(unit);
     } catch (e) {
-        res.status(500).json({message: `Server error: ${e.message}`});
+        return res.status(500).json({message: `Server error: ${e.message}`});
     }
 }
 
@@ -33,12 +33,12 @@ async function createUnit(req, res) {
         const {district, merhav, station} = req.body;
         const newUnit = await Unit.create({district, merhav, station});
 
-        res.status(201).json({
+        return res.status(201).json({
             message: "Successfully created unit",
             newUnit: newUnit
         });
     } catch (e) {
-        res.status(500).json({message: `Server error: ${e.message}`});
+        return res.status(500).json({message: `Server error: ${e.message}`});
     }
 }
 
@@ -61,13 +61,13 @@ async function updateUnit(req, res) {
         if (!updatedUnit)
             return res.status(404).json({message: `unit was not updated`});
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Successfully updated unit",
             updatedUnit
         });
 
     } catch (err) {
-        res.status(500).json({message: `Server error: ${err.message}`});
+        return res.status(500).json({message: `Server error: ${err.message}`});
     }
 }
 
@@ -85,12 +85,12 @@ async function deleteUnit(req, res) {
         if (!deletedUnit)
             return res.status(404).json({message: `unit was not found`});
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Successfully deleted unit",
             deletedUnit
         });
     } catch (e) {
-        res.status(500).json({message: `Server error: ${e.message}`});
+        return res.status(500).json({message: `Server error: ${e.message}`});
     }
 }
 

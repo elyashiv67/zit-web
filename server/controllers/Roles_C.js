@@ -10,7 +10,7 @@ async function getAllRoles(req, res) {
         }
         return res.status(200).json(roles);
     } catch (err) {
-        res.status(500).json({message: `An error occurred: ${err} in all role`});
+        return res.status(500).json({message: `An error occurred: ${err} in all role`});
     }
 }
 
@@ -24,7 +24,7 @@ async function getRoleById(req, res) {
         }
         return res.status(200).json(role);
     } catch (e) {
-        res.status(500).json({message: `Server error: ${e.message} in role id`});
+        return res.status(500).json({message: `Server error: ${e.message} in role id`});
     }
 }
 
@@ -40,7 +40,7 @@ async function createRole(req, res) {
         });
 
     } catch (e) {
-        res.status(500).json({message: `Server error: ${e.message}`});
+        return res.status(500).json({message: `Server error: ${e.message}`});
     }
 }
 
@@ -59,12 +59,12 @@ async function updateRole(req, res) {
             {new: true, runValidators: true}
         );
 
-        res.status(200).json({
+        return res.status(200).json({
             message: 'Role updated successfully',
             role: updatedRole
         });
     } catch (e) {
-        res.status(500).json({message: `Role not updated ${e}`});
+        return res.status(500).json({message: `Role not updated ${e}`});
     }
 }
 
@@ -81,12 +81,12 @@ async function deleteRole(req, res) {
         if (!deletedRole) {
             return res.status(404).json({message: 'Role not found'});
         }
-        res.status(200).json({
+        return res.status(200).json({
             message: 'Role deleted successfully',
             role: deletedRole
         });
     } catch (e) {
-        res.status(500).json({message: `Server error: ${e.message}`});
+        return res.status(500).json({message: `Server error: ${e.message}`});
     }
 }
 
