@@ -1,0 +1,54 @@
+# Two services = two containers. Compose puts them on one private virtual
+# network and lets them reach each other by SERVICE NAME as hostname.
+services:
+
+  # ---------------------------------------------------------------------------
+  # DATABASE CONTAINER
+  # ---------------------------------------------------------------------------
+  mongo:
+    image: mongo:7                # pulled from Docker Hub, not built by us
+    restart: unless-stopped       # auto-restart on crash or host reboot
+
+    volumes:
+      # Named volume "mongo_data" is mounted at MongoDB's data directory.
+      # This is what makes the data survive `docker compose down` + `up`.
+      - mongo_data:/data/db
+
+    # NO "ports:" here on purpose.
+    # Mongo listens on 27017 INSIDE the container. The app container reaches
+    # it over the private compose network as "mongo:27017". Publishing 27017
+    # to the host would expose an unauthenticated database to the internet.
+    healthcheck:
+      # Compose keeps pinging until this succeeds, then marks the service
+      # "healthy". The app waits for that (see depends_on below).
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # APP CONTAINER (Node / Express)
+  # ---------------------------------------------------------------------------
+  app:
+    build: .                      # build from the Dockerfile in this folder
+    restart: unless-stopped
+
+    ports:
+      # "HOST:CONTAINER" — publish container port 4586 to host port 4586 so
+      # your laptop / Postman can reach it at http://SERVER_IP:4586
+      - "4586:4586"
+
+    env_file:
+      # Every KEY=VALUE line in .env becomes an environment variable inside
+      # the container, so process.env.DB / JWT_SECRET / ... are set.
+      - .env
+
+    depends_on:
+      mongo:
+        # Don't start "app" until "mongo" reports healthy. Without this the
+        # app can boot first, fail to connect, and exit.
+        condition: service_healthy
+
+# Declares the named volume used above. Managed by Docker on the host.
+volumes:
+  mongo_data:

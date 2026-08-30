@@ -1,0 +1,18 @@
+# Things that must NOT go into the image build.
+# node_modules: installed fresh inside the image by "npm ci"
+node_modules
+# .env: secrets — injected at runtime by compose, never baked in
+.env
+# repo/editor cruft
+.git
+.idea
+# design docs, not needed at runtime
+DB
+# the docker files themselves don't need to be inside the image
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# NOTE: "environment/" is deliberately NOT listed here. It holds runtime code
+# (Auth_ENV.js) that the app imports. It is gitignored, so it must be present
+# in this folder (scp'd to the server) at build time to be copied into the image.
