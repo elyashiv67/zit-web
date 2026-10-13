@@ -21,6 +21,29 @@
     box-sizing: border-box;
 }
 
+/* A native datetime-local control lays out its date/time sub-fields as a
+   single-line flexbox internally. On a narrow phone screen there isn't
+   enough width for all of them, so the browser crops the overflow instead
+   of shrinking the text - that's why only the date stays visible.
+   Forcing that internal flexbox to wrap lets the time fields drop onto a
+   second line inside the same input instead of getting cut off. */
+.date-input::-webkit-datetime-edit {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.date-input::-webkit-datetime-edit-fields-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+    .date-input {
+        height: auto;
+        min-height: 44px;
+    }
+}
+
 /* .date-input::-webkit-calendar-picker-indicator {
     display: none;
     -webkit-appearance: none;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DateDiff, calculateTargetDvrDiff, calculateTargetRealTime } from "../HelpFunctions.js";
 import DateInput from "../DateInput/DateInput.jsx";
 import { format } from 'date-fns';
@@ -10,35 +10,53 @@ function DateContainer() {
     const [currentDate, setCurrentDate] = useState(null);
     const [dvrDate, setDvrDate] = useState(null);
     const [targetRealDate, setTargetRealDate] = useState(null);
-    const [message, setMessage] = useState("");
     const [targetDvrDate, setTargetDvrDate] = useState(null);
+    // Tracks which of the two target fields the user typed into last, so the
+    // auto-fill effect below knows which one is the source and which one it
+    // should compute and overwrite.
+    const [lastEditedTarget, setLastEditedTarget] = useState(null); // 'real' | 'dvr' | null
 
     const handleCurrentDateChange = (newValue) => { setCurrentDate(newValue); };
     const handleDvrDateChange = (newValue) => { setDvrDate(newValue); };
-    const handleTargetRealDateChange = (newValue) => { setTargetRealDate(newValue); };
-    const handleTargetDvrDateChange = (newValue) => { setTargetDvrDate(newValue); };
+    const handleTargetRealDateChange = (newValue) => {
+        setTargetRealDate(newValue);
+        setLastEditedTarget('real');
+    };
+    const handleTargetDvrDateChange = (newValue) => {
+        setTargetDvrDate(newValue);
+        setLastEditedTarget('dvr');
+    };
 
-    const ShowRealTimeInDvr = (currentDate, dvrDate, targetRealDate) => {
-        const targetDate = calculateTargetDvrDiff(currentDate, dvrDate, targetRealDate);
-        if (targetDate) {
-            setMessage(`הזמן בDVR הוא: ${format(targetDate, "dd/MM/yyyy HH:mm:ss")}`);
-        } else {
-            setMessage("Please fill in all time fields.");
-        }
-    }
     const getCurrentDate = () => {
         const currentDate = new Date();
         setCurrentDate(currentDate);
     }
 
-    const ShowRealTimeFromDvr = (currentDate, dvrDate, targetDvrDate) => {
-        const targetDate = calculateTargetRealTime(currentDate, dvrDate, targetDvrDate);
-        if (targetDate) {
-            setMessage(`הזמן בDVR הוא: ${format(targetDate, "dd/MM/yyyy HH:mm:ss")}`);
-        } else {
-            setMessage("Please fill in all time fields.");
+    // Auto-fill the other target field whenever the source field (the one
+    // the user last edited) - or the current/DVR reference times it depends
+    // on - changes. Guarded by comparing timestamps so writing the computed
+    // value doesn't trigger another recompute in the opposite direction.
+    useEffect(() => {
+        if (lastEditedTarget === 'real' && currentDate && dvrDate && targetRealDate) {
+            const computed = calculateTargetDvrDiff(currentDate, dvrDate, targetRealDate);
+            if (computed && (!targetDvrDate || computed.getTime() !== targetDvrDate.getTime())) {
+                setTargetDvrDate(computed);
+            }
+        } else if (lastEditedTarget === 'dvr' && currentDate && dvrDate && targetDvrDate) {
+            const computed = calculateTargetRealTime(currentDate, dvrDate, targetDvrDate);
+            if (computed && (!targetRealDate || computed.getTime() !== targetRealDate.getTime())) {
+                setTargetRealDate(computed);
+            }
         }
-    }
+    }, [currentDate, dvrDate, targetRealDate, targetDvrDate, lastEditedTarget]);
+
+    const calcSourceCaption = !lastEditedTarget
+        ? "-----"
+        : (lastEditedTarget === 'real'
+            ? "מבוסס על הזמן האמת שהוזן"
+            : "מבוסס על זמן ה-DVR שהוזן");
+
+    const dvrTargetDisplay = targetDvrDate ? format(targetDvrDate, "dd/MM/yyyy HH:mm:ss") : "-----";
 
     const timeDiffResult = DateDiff(currentDate, dvrDate);
     const diffColor = (timeDiffResult === "0 ימים\n00:00:00") ? "inherit" : (timeDiffResult.includes("-") ? "red" : "green");
@@ -91,6 +109,9 @@ function DateContainer() {
 
                     <div className="date-clac">
                         <h1 className="card-title">חישוב זמן אירוע</h1>
+                        <p className="calc-instructions" style={{ direction: "rtl" }}>
+                            הזן את זמן האירוע באחד השדות, והשדה השני יחושב אוטומטית
+                        </p>
                         <div className="calc-inputs">
                             {/* <DateInput
                                 labelName={"Target Real Date"}
@@ -98,7 +119,7 @@ function DateContainer() {
                                 onTimeChange={handleTargetRealDateChange}
                             /> */}
                             <ScrollInput
-                                labelName={"זמן אמת"}
+                                labelName={"זמן האירוע בזמן אמת"}
                                 value={targetRealDate}
                                 onTimeChange={handleTargetRealDateChange}
                             />
@@ -108,20 +129,18 @@ function DateContainer() {
                                 onTimeChange={handleTargetDvrDateChange}
                             /> */}
                             <ScrollInput
-                                labelName={"זמן DVR"}
+                                labelName={"זמן האירוע ב-DVR"}
                                 value={targetDvrDate}
                                 onTimeChange={handleTargetDvrDateChange}
                             />
                         </div>
 
-                        <div className="buttons-group">
-                            <button onClick={() => ShowRealTimeInDvr(currentDate, dvrDate, targetRealDate)}>הצג לפי זמן אמת</button>
-                            <button onClick={() => ShowRealTimeFromDvr(currentDate, dvrDate, targetDvrDate)} style={{ direction: "rtl" }}>הצג לפי זמן DVR</button>
-                        </div>
-
                         <div className="results-group" style={{ direction: "rtl" }}>
-                            <p><strong>תוצאה :</strong>{' '}<br />
-                                {message || "-----"}</p>
+                            <p className="calc-source-caption">{calcSourceCaption}</p>
+                            <p className="calc-dvr-target">
+                                <strong>עבור לזמן הזה ב-DVR:</strong>{' '}<br />
+                                {dvrTargetDisplay}
+                            </p>
                         </div>
 
                     </div>
