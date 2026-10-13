@@ -60,6 +60,18 @@
         text-align: center;
         direction: ltr;
     }
+
+    /* The browser's default UA style gives this icon
+       "margin-inline-start: auto", which eats up all remaining flex space
+       and shoves it to the far edge of the input - far from the now
+       centered text. Overriding the margin pulls it right next to the
+       text, and the extra padding gives it a bigger, easier tap target. */
+    .date-input::-webkit-calendar-picker-indicator {
+        margin-inline-start: 8px;
+        margin-inline-end: 0;
+        padding: 6px;
+        cursor: pointer;
+    }
 }
 
 /* .date-input::-webkit-calendar-picker-indicator {
