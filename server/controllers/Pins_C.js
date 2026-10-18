@@ -44,9 +44,15 @@ async function getPinById(req,res){
 
 async function addPin(req,res){
     try {
-        const values = req.validPinValues;
+        // owner and assigned_unit come from the logged-in user, never from the body.
+        // unit may be a populated doc.
+        const unit = req.user.unit && req.user.unit._id ? req.user.unit._id : req.user.unit;
 
-        const newPin = await Pin.create(values);
+        const newPin = await Pin.create({
+            ...req.valid_body,
+            owner: req.user.id,
+            assigned_unit: unit
+        });
 
         return res.status(201).json({
             message: `Pin added successfully.`,
@@ -60,7 +66,14 @@ async function addPin(req,res){
 async function updatePin(req,res){
     try {
         // req.pin is loaded by isPinOwnerOrAdmin; save() runs schema validators
-        req.pin.set(req.validPinUpdateValues);
+        const {dvr, ...updates} = req.valid_body;
+        // dot-notation paths so a partial dvr update only touches the keys sent
+        // (setting updates.dvr = {...} would replace the whole subdoc)
+        if (dvr) {
+            if (dvr.user_name !== undefined) updates['dvr.user_name'] = dvr.user_name;
+            if (dvr.password !== undefined) updates['dvr.password'] = dvr.password;
+        }
+        req.pin.set(updates);
         const updatedPin = await req.pin.save();
 
         return res.status(200).json({

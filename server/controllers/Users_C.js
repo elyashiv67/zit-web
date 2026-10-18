@@ -30,7 +30,7 @@ async function getUserById(req, res) {
 
 async function registerUser(req, res) {
     try {
-        const data = req.validRegisterValues;
+        const data = req.valid_body;
 
         const hashedPass = await bcrypt.hash(data.pass, 10);
 
@@ -67,7 +67,7 @@ async function deleteUser(req, res) {
 async function updateUser(req, res) {
     try {
         const id = req.valid_id;
-        const updateValues = req.validUpdateValues;
+        const updateValues = req.valid_body;
 
         const updatedUser = await User.findByIdAndUpdate(id , updateValues);
 

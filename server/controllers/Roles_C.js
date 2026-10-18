@@ -30,7 +30,7 @@ async function getRoleById(req, res) {
 
 async function createRole(req, res) {
     try {
-        const {name, level} = req.body;
+        const {name, level} = req.valid_body;
         const role = await Role.create({name, level});
 
 
@@ -47,7 +47,7 @@ async function createRole(req, res) {
 async function updateRole(req, res) {
     try {
         const id = req.valid_id;
-        const {name, level} = req.body;
+        const {name, level} = req.valid_body;
         const updatedData = {
             ...(name !== undefined && {name}),
             ...(level !== undefined && {level})

@@ -30,7 +30,7 @@ async function getUnitById(req, res) {
 
 async function createUnit(req, res) {
     try {
-        const {district, merhav, station} = req.body;
+        const {district, merhav, station} = req.valid_body;
         const newUnit = await Unit.create({district, merhav, station});
 
         return res.status(201).json({
@@ -45,7 +45,7 @@ async function createUnit(req, res) {
 async function updateUnit(req, res) {
     try {
         const id = req.valid_id;
-        const {district, merhav, station} = req.body;
+        const {district, merhav, station} = req.valid_body;
         const updateData = {
             ...(district !== undefined && {district}),
             ...(merhav !== undefined && {merhav}),

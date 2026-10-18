@@ -77,7 +77,7 @@ async function LogInByCookie(req, res, next) {
 
 async function LogInByPass(req, res) {
     try {
-        const {uname , userPass} = req.validLoginValues;
+        const {username: uname, password: userPass} = req.valid_body;
 
         let user = await getUserByName_auth(uname);
         if (!user) {
