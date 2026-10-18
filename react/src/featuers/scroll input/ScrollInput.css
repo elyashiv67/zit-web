@@ -21,7 +21,56 @@
     box-sizing: border-box;
 }
 
-/* .date-input::-webkit-calendar-picker-indicator {
-    display: none;
-    -webkit-appearance: none;
-} */
+/* A native datetime-local control lays out its date/time sub-fields as a
+   single-line flexbox internally. On a narrow phone screen there isn't
+   enough width for all of them, so the browser either crops the overflow
+   or wraps at an arbitrary, messy point. Capping the inner fields-wrapper
+   to roughly the width of the date portion forces the wrap to happen
+   right after the date every time, dropping the time cleanly onto its
+   own line below - still inside the same input. */
+.date-input::-webkit-datetime-edit {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    direction: ltr;
+}
+
+.date-input::-webkit-datetime-edit-fields-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 4px;
+    text-align: center;
+    direction: ltr;
+}
+
+@media (max-width: 600px) {
+    .date-input::-webkit-datetime-edit-fields-wrapper {
+        max-width: 11ch;
+    }
+
+    /* Deliberately not setting display:flex on the input itself here -
+       that overrides the browser's native rendering mode for date/time
+       inputs and makes the calendar icon disappear entirely. text-align
+       on its own is enough to center the native text content. */
+    .date-input {
+        height: auto;
+        min-height: 64px;
+        line-height: 1.3;
+        text-align: center;
+        direction: ltr;
+    }
+
+    /* The text block above no longer claims the full row width, so there's
+       now room left in the flex row for this icon. Its browser default is
+       "margin-inline-start: auto", which eats all that leftover space and
+       pushes it to the far edge - overriding it to a small fixed margin
+       keeps it right beside the text instead. (iOS Safari doesn't render
+       this pseudo-element at all, so this only affects Android/Chrome -
+       iOS keeps its own native look untouched.) */
+    .date-input::-webkit-calendar-picker-indicator {
+        margin-inline-start: 6px;
+        margin-inline-end: 0;
+        cursor: pointer;
+    }
+}
