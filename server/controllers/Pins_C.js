@@ -1,5 +1,7 @@
 import Pin from '../modules/pins.js';
+import path from 'path';
 import {getUnitId} from '../middleware/global_MID.js';
+import {removePinImageFiles, removePinImagesDir, pinImagesDir} from '../middleware/Upload_MID.js';
 
 async function getAllPins(req,res){
     try {
@@ -71,6 +73,7 @@ async function deletePin(req,res){
     try {
         // req.pin is loaded by isPinUnitOrAdmin
         await req.pin.deleteOne();
+        removePinImagesDir(req.pin._id);
 
         return res.status(200).json({
             message: `Pin deleted successfully.`,
@@ -81,4 +84,44 @@ async function deletePin(req,res){
     }
 }
 
-export {getAllPins,getAllPinsByUnit ,getPinById, addPin, updatePin, deletePin};
+// files are saved by uploadPinImages; this only records their names on the pin
+async function addPinImages(req, res) {
+    try {
+        req.pin.image.push(...req.uploaded_images);
+        const updatedPin = await req.pin.save();
+
+        return res.status(201).json({
+            message: 'Images added successfully.',
+            pin: updatedPin
+        });
+    } catch (e) {
+        removePinImageFiles(req.pin._id, req.uploaded_images);
+        return res.status(500).json({message: `Server error: ${e.message}`});
+    }
+}
+
+// isPinImage has already checked the name belongs to this pin
+async function getPinImage(req, res) {
+    return res.sendFile(path.join(pinImagesDir(req.pin._id), req.params.filename), (err) => {
+        if (err && !res.headersSent)
+            res.status(404).json({message: 'image not found'});
+    });
+}
+
+async function deletePinImage(req, res) {
+    try {
+        const name = req.params.filename;
+        req.pin.image.pull(name);
+        const updatedPin = await req.pin.save();
+        removePinImageFiles(req.pin._id, [name]);
+
+        return res.status(200).json({
+            message: 'Image deleted successfully.',
+            pin: updatedPin
+        });
+    } catch (e) {
+        return res.status(500).json({message: `Server error: ${e.message}`});
+    }
+}
+
+export {getAllPins,getAllPinsByUnit ,getPinById, addPin, updatePin, deletePin, addPinImages, getPinImage, deletePinImage};
