@@ -5,9 +5,6 @@ async function getAllRoles(req, res) {
     try {
         const roles = await Role.find();
 
-        if (roles.length === 0) {
-            return res.status(404).json({message: "No role found"});
-        }
         return res.status(200).json(roles);
     } catch (err) {
         return res.status(500).json({message: `An error occurred: ${err} in all role`});
@@ -30,7 +27,7 @@ async function getRoleById(req, res) {
 
 async function createRole(req, res) {
     try {
-        const {name, level} = req.body;
+        const {name, level} = req.valid_body;
         const role = await Role.create({name, level});
 
 
@@ -40,6 +37,10 @@ async function createRole(req, res) {
         });
 
     } catch (e) {
+        if (e.code === 11000) {
+            const field = Object.keys(e.keyPattern)[0];
+            return res.status(409).json({message: `${field} already exists`, field});
+        }
         return res.status(500).json({message: `Server error: ${e.message}`});
     }
 }
@@ -47,7 +48,7 @@ async function createRole(req, res) {
 async function updateRole(req, res) {
     try {
         const id = req.valid_id;
-        const {name, level} = req.body;
+        const {name, level} = req.valid_body;
         const updatedData = {
             ...(name !== undefined && {name}),
             ...(level !== undefined && {level})
@@ -59,12 +60,20 @@ async function updateRole(req, res) {
             {new: true, runValidators: true}
         );
 
+        if (!updatedRole) {
+            return res.status(404).json({message: 'Role not found'});
+        }
+
         return res.status(200).json({
             message: 'Role updated successfully',
             role: updatedRole
         });
     } catch (e) {
-        return res.status(500).json({message: `Role not updated ${e}`});
+        if (e.code === 11000) {
+            const field = Object.keys(e.keyPattern)[0];
+            return res.status(409).json({message: `${field} already exists`, field});
+        }
+        return res.status(500).json({message: `Role not updated ${e.message}`});
     }
 }
 
@@ -83,7 +92,7 @@ async function deleteRole(req, res) {
         }
         return res.status(200).json({
             message: 'Role deleted successfully',
-            role: deletedRole
+            id: deletedRole._id
         });
     } catch (e) {
         return res.status(500).json({message: `Server error: ${e.message}`});

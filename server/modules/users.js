@@ -50,7 +50,13 @@ const UserSchema = new mongoose.Schema({
         }
     },
     {
-        timestamps: true
+        timestamps: true,
+        toJSON: {
+            transform: (doc, ret) => {
+                delete ret.pass;
+                return ret;
+            }
+        }
     }
 );
 

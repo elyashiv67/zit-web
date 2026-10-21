@@ -6,4 +6,13 @@ import svgr from 'vite-plugin-svgr'
 export default defineConfig({
   plugins: [react(), svgr()],
   base: '/zit-web/',
+  server: {
+    // in dev, call the API as fetch('/api/...') — same origin, so the auth cookie just works
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4586',
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
 })

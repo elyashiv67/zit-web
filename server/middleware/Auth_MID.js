@@ -15,8 +15,8 @@ async function CheckLogin(req, res, next) {
     try {
         if (!req.session.user) {
             if (!req.cookies[cookieName]) {
-                // in frontend to know to go to login page
-                return res.status(423).send({error: "need to login"});
+                // in frontend: 401 -> go to login page
+                return res.status(401).json({message: "need to login"});
             }
             let failReason = await LogInByCookie(req, res, next);
             if (res.LoggedIn === false) {
@@ -40,7 +40,7 @@ async function CheckLogin(req, res, next) {
         next();
     } catch (err) {
         console.log(err);
-        return res.status(500).json({error: "server error in checkLogin"});
+        return res.status(500).json({message: "server error in checkLogin"});
     }
 }
 
@@ -65,7 +65,7 @@ async function LogInByCookie(req, res, next) {
         req.user = isExist;
         const logged_in = await LogIn(req, res, next);
         if(!logged_in)
-            return
+            return "Failed to log in"
 
         res.LoggedIn = true;
 
@@ -77,16 +77,16 @@ async function LogInByCookie(req, res, next) {
 
 async function LogInByPass(req, res) {
     try {
-        const {uname , userPass} = req.validLoginValues;
+        const {username: uname, password: userPass} = req.valid_body;
 
         let user = await getUserByName_auth(uname);
         if (!user) {
-            return res.status(401).json({message: "User not found"});
+            return res.status(401).json({message: "invalid username or password"});
         }
         let passMatch = await bcrypt.compare(userPass, user.pass);
         // let passMatch = req.body.password === user.user_pass;
         if (!passMatch) {
-            return res.status(402).json({message: "pass dont match"});
+            return res.status(401).json({message: "invalid username or password"});
         }
         req.user = user;
         const logged_in = await LogIn(req, res);
@@ -95,7 +95,7 @@ async function LogInByPass(req, res) {
 
 
         // console.log(req.session.user_email);
-        return res.status(200).json({message: "Successfully logged in"});
+        return res.status(200).json({message: "Successfully logged in", user: req.session.user});
 
     } catch (err) {
         console.log(`in loginByPass : ${err}`);
@@ -205,6 +205,11 @@ async function LogIn(req, res) {
     }
 }
 
+// returns the logged-in user (from the session) so the frontend can restore state on page load
+function GetMe(req, res) {
+    return res.status(200).json({user: req.user});
+}
+
 async function LogOut(req, res) {
     try {
         req.session.destroy();
@@ -218,4 +223,4 @@ async function LogOut(req, res) {
 
 
 
-export {CheckLogin, LogInByPass, LogOut}
+export {CheckLogin, LogInByPass, LogOut, GetMe}
