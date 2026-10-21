@@ -5,10 +5,7 @@ async function getAllUsers(req, res) {
     try {
         const users = await User.find().select('-pass');
 
-        if (users.length === 0)
-            return res.status(404).json({message: 'No users found.'});
-
-        return res.status(200).json({users});
+        return res.status(200).json(users);
     } catch (e) {
         return res.status(500).json({message: `Server error: ${e.message}`});
     }
@@ -22,7 +19,7 @@ async function getUserById(req, res) {
         if (!user)
             return res.status(404).json({message: 'User not found'});
 
-        return res.status(200).json({user});
+        return res.status(200).json(user);
     } catch (e) {
         return res.status(500).json({message: `Server error: ${e.message}`});
     }
@@ -39,7 +36,7 @@ async function registerUser(req, res) {
             pass: hashedPass
         });
 
-        return res.status(201).json({message: "User created successfully", id: newUser._id});
+        return res.status(201).json({message: "User created successfully", user: newUser});
 
     } catch (err) {
         if (err.code === 11000) {
@@ -69,14 +66,24 @@ async function updateUser(req, res) {
         const id = req.valid_id;
         const updateValues = req.valid_body;
 
-        const updatedUser = await User.findByIdAndUpdate(id , updateValues);
+        const updatedUser = await User.findByIdAndUpdate(id, updateValues, {new: true, runValidators: true})
+            .populate('role').populate('unit');
 
         if (!updatedUser)
             return res.status(404).json({message: 'User not found'});
 
-        return res.status(200).json({message: "User updated successfully", id});
+        // keep the session in sync so /auth/me shows the new values
+        if (id === req.session.user.id.toString()) {
+            Object.assign(req.session.user, updateValues);
+        }
+
+        return res.status(200).json({message: "User updated successfully", user: updatedUser});
 
     } catch (e) {
+        if (e.code === 11000) {
+            const field = Object.keys(e.keyPattern)[0];
+            return res.status(409).json({message: `${field} already exists`, field});
+        }
         return res.status(500).json({ message: `Server error: ${e.message}` });
     }
 }

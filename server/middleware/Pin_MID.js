@@ -1,17 +1,19 @@
 import Pin from '../modules/pins.js';
+import {getUnitId} from './global_MID.js';
 
 
 // requires validate() (sets req.valid_id) and CheckLogin (sets req.user) earlier in the
-// chain. Loads the pin, allows through only its owner or an admin, and leaves the
-// loaded document on req.pin so the controller can reuse it instead of re-fetching.
-async function isPinOwnerOrAdmin(req, res, next) {
+// chain. Pins belong to a unit, not a user: anyone in the pin's unit (or an admin) gets
+// through. Loads the pin WITH dvr.password (viewing a pin is how the unit gets the DVR
+// login) and leaves it on req.pin so the controller can reuse it instead of re-fetching.
+async function isPinUnitOrAdmin(req, res, next) {
     try {
-        const pin = await Pin.findById(req.valid_id);
+        const pin = await Pin.findById(req.valid_id).select('+dvr.password');
         if (!pin) {
             return res.status(404).json({message: "pin not found"});
         }
 
-        if (!req.user.is_admin && !(pin.owner && pin.owner.equals(req.user.id))) {
+        if (!req.user.is_admin && !pin.assigned_unit.equals(getUnitId(req.user))) {
             return res.status(403).json({message: "user is not authorized"});
         }
 
@@ -23,4 +25,4 @@ async function isPinOwnerOrAdmin(req, res, next) {
 }
 
 
-export {isPinOwnerOrAdmin};
+export {isPinUnitOrAdmin};

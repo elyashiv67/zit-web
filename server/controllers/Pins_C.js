@@ -1,11 +1,9 @@
 import Pin from '../modules/pins.js';
+import {getUnitId} from '../middleware/global_MID.js';
 
 async function getAllPins(req,res){
     try {
         const pins = await Pin.find();
-
-        if(pins.length === 0)
-            return res.status(404).json({message: "No pins found"});
 
         return res.status(200).json(pins);
     } catch (e) {
@@ -15,12 +13,7 @@ async function getAllPins(req,res){
 
 async function getAllPinsByUnit(req,res){
     try {
-        const unitId = req.user.unit && req.user.unit._id ? req.user.unit._id : req.user.unit;
-
-        const pins = await Pin.find({assigned_unit: unitId});
-
-        if(pins.length === 0)
-            return res.status(404).json({message: "No pins found"});
+        const pins = await Pin.find({assigned_unit: getUnitId(req.user)});
 
         return res.status(200).json(pins);
     } catch (e) {
@@ -29,34 +22,23 @@ async function getAllPinsByUnit(req,res){
 }
 
 async function getPinById(req,res){
-    try {
-        const id = req.valid_id;
-        const pin = await Pin.findById(id);
-
-        if(!pin)
-            return res.status(404).json({message: "No pin found"});
-
-        return res.status(200).json(pin);
-    } catch (e) {
-        return res.status(500).json({ message: `Server error: ${e.message}` });
-    }
+    // req.pin is loaded (with dvr.password) by isPinUnitOrAdmin
+    return res.status(200).json(req.pin);
 }
 
 async function addPin(req,res){
     try {
-        // owner and assigned_unit come from the logged-in user, never from the body.
-        // unit may be a populated doc.
-        const unit = req.user.unit && req.user.unit._id ? req.user.unit._id : req.user.unit;
-
+        // unit and creator come from the logged-in user, never from the body
         const newPin = await Pin.create({
             ...req.valid_body,
-            owner: req.user.id,
-            assigned_unit: unit
+            creator: req.user.id,
+            creator_name: req.user.name,
+            assigned_unit: getUnitId(req.user)
         });
 
         return res.status(201).json({
             message: `Pin added successfully.`,
-            id: newPin._id});
+            pin: newPin});
 
     } catch (e) {
         return res.status(500).json({ message: `Server error: ${e.message}` });
@@ -65,7 +47,7 @@ async function addPin(req,res){
 
 async function updatePin(req,res){
     try {
-        // req.pin is loaded by isPinOwnerOrAdmin; save() runs schema validators
+        // req.pin is loaded by isPinUnitOrAdmin; save() runs schema validators
         const {dvr, ...updates} = req.valid_body;
         // dot-notation paths so a partial dvr update only touches the keys sent
         // (setting updates.dvr = {...} would replace the whole subdoc)
@@ -78,7 +60,7 @@ async function updatePin(req,res){
 
         return res.status(200).json({
             message: `Pin updated successfully.`,
-            id: updatedPin._id,
+            pin: updatedPin,
         });
     } catch (e) {
         return res.status(500).json({ message: `Server error: ${e.message}` });
@@ -87,7 +69,7 @@ async function updatePin(req,res){
 
 async function deletePin(req,res){
     try {
-        // req.pin is loaded by isPinOwnerOrAdmin
+        // req.pin is loaded by isPinUnitOrAdmin
         await req.pin.deleteOne();
 
         return res.status(200).json({

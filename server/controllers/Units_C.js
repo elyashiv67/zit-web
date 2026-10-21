@@ -1,12 +1,10 @@
 import Unit from '../modules/units.js';
 import User from '../modules/users.js';
+import Pin from '../modules/pins.js';
 
 async function getAllUnits(req, res) {
     try {
         const units = await Unit.find();
-
-        if (units.length === 0)
-            return res.status(404).json({message: 'No units found'});
 
         return res.status(200).json(units);
     } catch (e) {
@@ -35,9 +33,13 @@ async function createUnit(req, res) {
 
         return res.status(201).json({
             message: "Successfully created unit",
-            newUnit: newUnit
+            unit: newUnit
         });
     } catch (e) {
+        if (e.code === 11000) {
+            const field = Object.keys(e.keyPattern)[0];
+            return res.status(409).json({message: `${field} already exists`, field});
+        }
         return res.status(500).json({message: `Server error: ${e.message}`});
     }
 }
@@ -59,14 +61,18 @@ async function updateUnit(req, res) {
         );
 
         if (!updatedUnit)
-            return res.status(404).json({message: `unit was not updated`});
+            return res.status(404).json({message: `unit was not found`});
 
         return res.status(200).json({
             message: "Successfully updated unit",
-            updatedUnit
+            unit: updatedUnit
         });
 
     } catch (err) {
+        if (err.code === 11000) {
+            const field = Object.keys(err.keyPattern)[0];
+            return res.status(409).json({message: `${field} already exists`, field});
+        }
         return res.status(500).json({message: `Server error: ${err.message}`});
     }
 }
@@ -80,6 +86,12 @@ async function deleteUnit(req, res) {
             return res.status(409).json({message: 'Cannot delete unit: still assigned to one or more users'});
         }
 
+        // pins belong to the unit, so they'd be left with no one able to manage them
+        const hasPins = await Pin.exists({assigned_unit: id});
+        if (hasPins) {
+            return res.status(409).json({message: 'Cannot delete unit: it still has pins'});
+        }
+
         const deletedUnit = await Unit.findByIdAndDelete(id);
 
         if (!deletedUnit)
@@ -87,7 +99,7 @@ async function deleteUnit(req, res) {
 
         return res.status(200).json({
             message: "Successfully deleted unit",
-            deletedUnit
+            id: deletedUnit._id
         });
     } catch (e) {
         return res.status(500).json({message: `Server error: ${e.message}`});

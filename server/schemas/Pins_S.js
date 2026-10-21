@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {atLeastOneField} from './common_S.js';
 
-// owner and assigned_unit are never taken from the body — they come from the logged-in user
+// assigned_unit and creator are never taken from the body — they come from the logged-in user
 const pinKeys = {
     name: z.string().trim().min(1).max(100),
     location: z.object({

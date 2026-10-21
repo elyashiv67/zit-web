@@ -1,3 +1,8 @@
+// req.user.unit comes from the session and may be a populated doc or a bare id
+function getUnitId(user) {
+    return user.unit && user.unit._id ? user.unit._id : user.unit;
+}
+
 function isAdmin(req, res, next) {
     if (!req.session.user) {
         return res.status(401).json({message: `need to login`});
@@ -20,4 +25,4 @@ function isSelfOrAdmin(req, res, next) {
     return res.status(403).json({message: `user is not authorized`});
 }
 
-export {isAdmin, isSelfOrAdmin};
+export {isAdmin, isSelfOrAdmin, getUnitId};

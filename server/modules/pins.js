@@ -7,9 +7,15 @@ const PinSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    owner: {
+    // who made the pin — for tracking only, permissions go by assigned_unit.
+    // creator_name is a snapshot so it still shows after the user is deleted
+    creator: {
         type: ObjectId,
         ref: 'User',
+        required: true
+    },
+    creator_name: {
+        type: String,
         required: true
     },
     location: {
@@ -31,7 +37,8 @@ const PinSchema = new mongoose.Schema({
             type: String
         },
         password: {
-            type: String
+            type: String,
+            select: false
         }
     },
     assigned_unit: {
