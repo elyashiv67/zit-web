@@ -7,10 +7,18 @@ Express 5 + MongoDB (Mongoose) + Zod. All bodies are JSON unless noted (image up
 ```bash
 cd server
 npm install
-node index.js        # listens on PORT from .env (4586 in dev)
+npm run dev          # nodemon, restarts on changes
+npm start            # plain node (production)
+npm test             # every route, end to end — on a separate test database
 ```
 
-`.env` needs: `HOST`, `PORT`, `DB` (Mongo connection string), `JWT_SECRET`, `SESSION_SECRET`.
+Copy `.env.example` to `.env`. Required: `PORT`, `DB`, `SESSION_SECRET`, `DVR_SECRET` (32+ random characters).
+The server checks `.env` at startup and stops with a clear message if something is missing.
+
+`npm test` starts its own server on port 4599 against the database `zit_test` (on the same MongoDB as `DB`),
+seeds it, runs ~220 checks and drops it again. Real data is never touched.
+
+**Behind nginx / Docker:** set `TRUST_PROXY=1` (real client IP for rate limits, and secure cookies over HTTPS).
 
 ### Calling it from the React app
 
@@ -23,8 +31,10 @@ Always send `credentials: 'include'` if you ever call the server on a different 
 ## Conventions
 
 ### Auth
-- Login sets two cookies: the session cookie (`connect.sid`) and a 30-day remember-me cookie (`zit-auth`, httpOnly).
-  When the session expires, the remember-me cookie logs the user back in automatically.
+- Login sets one cookie, `zit.sid` (HttpOnly, SameSite=Lax, Secure in production). The session itself is stored in MongoDB.
+- It lasts 30 days **since the last visit** — users who use the app stay logged in; survives server restarts.
+- Logout deletes the session on the server, so even a copied cookie stops working. Other devices stay logged in.
+- Visitors who aren't logged in get no cookie at all.
 - Every protected route reloads the user from the DB, so:
   - a deleted user is locked out on the next request,
   - role / unit changes apply immediately (no re-login),
@@ -54,9 +64,11 @@ Unknown body keys are silently stripped. Strings are trimmed, `email` is lowerca
 | 404 | not found (also unknown routes) | |
 | 409 | conflict: duplicate value, or delete blocked (in use / last admin) | show `message` |
 | 429 | too many failed attempts | show `message`, wait 15 min (`Retry-After` header) |
-| 500 | server error | |
+| 413 | request body too large | |
+| 500 | server error (details only in the server log) | show a generic error |
+| 503 | database unavailable | show "try again in a moment" — **not** a login redirect |
 
-> 401 is only ever "you need to log in". A wrong current password on password change is a **400**, so it never kicks the user out.
+> 401 is only ever "you need to log in". A database outage is 503, never 401, so nobody is logged out by it. A wrong current password on password change is a **400**, so it never kicks the user out.
 
 ### Access levels used below
 - **public** – no login
@@ -77,7 +89,9 @@ Unknown body keys are silently stripped. Strings are trimmed, `email` is lowerca
 | POST | `/auth/register` | admin | see [register body](#register-body) | 201 `{ message, user }` |
 | POST | `/auth/reg` | admin | same as `/auth/register` | same |
 
-- **Login errors:** 401 `invalid username or password` (same message whether the user exists or not).
+- **Usernames are case-insensitive** (`Admin` = `admin`; stored lowercase).
+- **Login errors:** 401 `invalid username or password` — same message *and* same response time whether the user exists or not.
+  403 if the account has no role / unit.
 - **Login rate limit:** 5 failed attempts per username+IP, and 30 failed attempts per IP, per 15 min → 429. Successful logins don't count.
 - **`/auth/me`** — call on app load to restore the logged-in user. 401 → show login.
 
@@ -98,7 +112,7 @@ The `user` object from login / `me`:
 | Field | Rules |
 |---|---|
 | `name` | string, 1–100 |
-| `user_name` | string, 1–100, unique |
+| `user_name` | string, 1–100, unique, case-insensitive (stored lowercase) |
 | `pass` | string, 6–100 |
 | `TZ` | string, unique |
 | `police_id` | string, unique |
@@ -107,7 +121,7 @@ The `user` object from login / `me`:
 | `role` | role `_id` (must exist) |
 | `unit` | unit `_id` (must exist) |
 
-Errors: 409 `{ message: "<field> already exists", field }`, 400 `{ message: "role not found", field: "role" }`.
+Errors: 409 `{ message: "<field> already exists", field, fields }`, 400 `{ message: "role not found", field: "role" }`.
 
 ---
 
@@ -126,7 +140,8 @@ The password hash is never returned.
 **PATCH `/user/:id`** — at least one field:
 - regular user (on themselves): `name`, `phone`, `email`. Anything else is ignored.
 - admin: also `user_name`, `TZ`, `police_id`, `role`, `unit`. (Not `pass` — use the password route.)
-- errors: 409 duplicate value, 400 role/unit not found, 409 `Cannot change the role of the last admin`.
+- errors: 409 duplicate value, 400 role/unit not found, 409 `Cannot change the role of the last admin`
+  (safe even if two admins demote each other at the same moment — one always stays admin).
 
 **PATCH `/user/:id/password`**
 - changing your own: `current_password` is required. This device stays logged in; all other devices are logged out.
@@ -136,7 +151,7 @@ The password hash is never returned.
   429 after 5 wrong `current_password` attempts in 15 min.
 
 **DELETE `/user/:id`** — 409 `Cannot delete the last admin`. A deleted user's pins stay with the unit.
-If users delete themselves, their session ends — redirect to login.
+If users delete themselves, their session ends in the same response (cookie cleared) — redirect to login.
 
 ---
 
@@ -146,7 +161,7 @@ If users delete themselves, their session ends — redirect to login.
 |---|---|---|---|---|
 | GET | `/role` | login | – | array |
 | GET | `/role/:id` | login | – | role |
-| POST | `/role` | admin | `{ level: number, name: "admin" \| "user" }` | 201 `{ message, role }` |
+| POST | `/role` | admin | `{ level: positive integer, name: "admin" \| "user" }` | 201 `{ message, role }` |
 | PATCH | `/role/:id` | admin | any of `level`, `name` | `{ message, role }` |
 | DELETE | `/role/:id` | admin | – | `{ message, id }` |
 
@@ -192,7 +207,9 @@ Body:
 }
 ```
 
-- `dvr` is optional. On PATCH, sending `dvr: { password }` only changes the password and keeps `user_name`.
+- `dvr` is optional. On PATCH, a dvr key that isn't sent is kept, and `null` removes it:
+  `dvr: { password: "new" }` changes only the password, `dvr: { password: null }` removes it.
+- `dvr.password` is stored **encrypted** (AES-256-GCM, key `DVR_SECRET`) and decrypted only in `GET /pin/:id`.
 - Set by the server, never from the body: `creator` (user id), `creator_name` (kept even if the user is deleted), `assigned_unit`, `image`.
 - `dvr.password` is only returned by `GET /pin/:id`, not in the lists.
 
@@ -218,11 +235,12 @@ Pin object:
 | GET | `/pin/:id/images/:filename` | unit/admin | – | the image file |
 | DELETE | `/pin/:id/images/:filename` | unit/admin | – | `{ message, pin }` |
 
-- Up to 10 images per upload and 10 per pin. Each file up to 25MB.
+- Up to 10 images per upload and 10 per pin (also enforced when two uploads happen at the same time). Each file up to 25MB, up to 100 megapixels.
 - Formats in: jpeg, png, webp (HEIC only if the server can decode it — otherwise 400 asking for "Most Compatible").
 - Every image is rotated by EXIF, shrunk to max 2560px, converted to jpg and compressed to **≤ 5MB**. EXIF (GPS, device) is removed.
 - If any file in the upload is bad, nothing is saved (400).
-- Files are stored at `server/uploads/pins/<pin _id>/<uuid>.jpg`; `pin.image` holds the file names.
+- Uploads stream to a temp folder (not RAM) and at most 2 images are compressed at once, so many / slow phone uploads can't run the server out of memory.
+- Files are stored at `<UPLOADS_DIR>/pins/<pin _id>/<uuid>.jpg` (default `server/uploads`); `pin.image` holds the file names.
 
 Uploading from React:
 
@@ -250,11 +268,13 @@ Not related to pins.
 | GET | `/timeDiff` | admin | – | array, newest first |
 | GET | `/timeDiff/my` | login | – | my history, newest first |
 | GET | `/timeDiff/allUnit` | login | – | my unit's history, newest first |
-| GET | `/timeDiff/:id` | unit/admin | – | time diff |
+| GET | `/timeDiff/:id` | owner/unit/admin | – | time diff |
 | POST | `/timeDiff` | login | `{ real_time, dvr_time, dvr_lastSave? }` | 201 `{ message, timeDiff }` |
 | DELETE | `/timeDiff/:id` | owner/admin | – | `{ message, id }` |
 
-- Times are anything `new Date()` accepts — send ISO strings (`date.toISOString()`).
+- Times must be ISO 8601 with `Z` or an offset — just send `date.toISOString()`. A plain date (`2026-10-21`) is also fine.
+  `null`, numbers, `true`, and times without a timezone (`2026-10-21T10:00:00`) are rejected with 400.
+- The owner can always read their own records, even after moving to another unit.
 - The server computes `offset_ms = dvr_time - real_time` (negative = DVR is behind).
 - `owner` and `assigned_unit` come from the logged-in user.
 
@@ -276,4 +296,6 @@ Time diff object:
 - Unknown route → 404 `{ message: "route not found: GET /…" }`.
 - Malformed JSON body → 400 `{ message: "invalid JSON body" }`.
 - Invalid `:id` → 400 `{ message: "id is not valid" }`.
-- Behind nginx / a Docker proxy, set `app.set('trust proxy', 1)` in `index.js`, otherwise the rate limit treats every user as the same IP.
+- `GET /health` (public) → 200 `{ status: "ok" }`, or 503 when the database is down. For Docker / uptime checks.
+- Security headers are set with helmet.
+- Behind nginx / a Docker proxy, set `TRUST_PROXY=1` in `.env`, otherwise the rate limit treats every user as the same IP.

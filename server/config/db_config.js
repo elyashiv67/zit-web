@@ -1,16 +1,15 @@
 import mongoose from 'mongoose';
+import env from './env.js';
 
 const connectDB = async () => {
-  const db = mongoose.connection;
+    const db = mongoose.connection;
 
-  db.on('error', (err) => {
-    console.log(err);
-  });
+    db.on('error', (err) => console.error('MongoDB error:', err.message));
+    db.on('disconnected', () => console.warn('MongoDB disconnected — the driver keeps retrying'));
+    db.on('reconnected', () => console.log('MongoDB reconnected ✅'));
 
-  db.once('connected', () => {
-    console.log(`MongoDB Connected and listening on port ${process.env.PORT}  ✅ ✅`);
-  });
-  await mongoose.connect(process.env.DB);
-}
+    await mongoose.connect(env.DB, env.DB_NAME ? {dbName: env.DB_NAME} : {});
+    console.log(`MongoDB connected (${db.name}) ✅`);
+};
 
 export default connectDB;

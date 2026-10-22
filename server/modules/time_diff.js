@@ -35,6 +35,8 @@ const TimeDiffSchema = new mongoose.Schema({
     }
 );
 
+// GET /timeDiff/my and /timeDiff/allUnit, newest first
 TimeDiffSchema.index({owner: 1, createdAt: -1});
+TimeDiffSchema.index({assigned_unit: 1, createdAt: -1});
 
 export default mongoose.model("TimeDiff", TimeDiffSchema);

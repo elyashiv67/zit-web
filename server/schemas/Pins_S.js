@@ -9,22 +9,27 @@ const pinKeys = {
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
     }),
-    dvr: z.object({
-        user_name: z.string().trim().min(1).optional(),
-        password: z.string().min(1).optional(),
-    }),
+    dvrUserName: z.string().trim().min(1).max(100),
+    dvrPassword: z.string().min(1).max(100),
 };
 
 const addPinSchema = z.object({
     name: pinKeys.name,
     location: pinKeys.location,
-    dvr: pinKeys.dvr.optional(),
+    dvr: z.object({
+        user_name: pinKeys.dvrUserName.optional(),
+        password: pinKeys.dvrPassword.optional(),
+    }).optional(),
 });
 
+// in dvr, a key that isn't sent is kept and null removes it
 const updatePinSchema = atLeastOneField(z.object({
     name: pinKeys.name,
     location: pinKeys.location,
-    dvr: pinKeys.dvr,
+    dvr: z.object({
+        user_name: pinKeys.dvrUserName.nullable(),
+        password: pinKeys.dvrPassword.nullable(),
+    }).partial(),
 }).partial());
 
 export {addPinSchema, updatePinSchema};
