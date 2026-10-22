@@ -5,10 +5,11 @@ import { validate } from "../middleware/Validate_MID.js";
 import { loginSchema } from "../schemas/Auth_S.js";
 import { registerUserSchema } from "../schemas/Users_S.js";
 import { registerUser } from "../controllers/Users_C.js";
+import { loginIpLimiter, loginLimiter } from "../middleware/RateLimit_MID.js";
 
 const router = express.Router();
 
-router.post("/login", validate(loginSchema), LogInByPass);
+router.post("/login", loginIpLimiter, loginLimiter, validate(loginSchema), LogInByPass);
 router.post("/logout", LogOut);
 router.get("/me", CheckLogin, GetMe);
 router.post("/register", CheckLogin, isAdmin, validate(registerUserSchema), registerUser);

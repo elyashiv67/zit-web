@@ -25,11 +25,21 @@ const registerUserSchema = z.object({
     unit: userKeys.unit,
 });
 
-// if more fields should be updatable, add them here
+// what users may change on themselves; if more fields should be updatable, add them here
 const updateUserSchema = atLeastOneField(z.object({
     name: userKeys.name,
     phone: userKeys.phone,
     email: userKeys.email,
 }).partial());
 
-export {registerUserSchema, updateUserSchema};
+// admins can change everything except the password (that has its own route)
+const adminUpdateUserSchema = atLeastOneField(registerUserSchema.omit({pass: true}).partial());
+
+// current_password is required when users change their own password (checked in the controller);
+// an admin resetting someone else's password doesn't need it
+const changePasswordSchema = z.object({
+    current_password: z.string().min(1).max(100).optional(),
+    new_password: userKeys.pass,
+});
+
+export {registerUserSchema, updateUserSchema, adminUpdateUserSchema, changePasswordSchema};

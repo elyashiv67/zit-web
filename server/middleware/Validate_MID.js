@@ -11,8 +11,11 @@ function formatIssues(issues) {
 //  - if the route has an :id param, checks it is a valid ObjectId -> req.valid_id
 //  - if a body schema is given, parses req.body with it -> req.valid_body
 //    (unknown keys are stripped, trims/lowercasing from the schema are applied)
-function validate(bodySchema) {
+//  - bodySchema can also be a function (req) => schema, e.g. a wider schema for admins
+function validate(bodySchemaOrFn) {
     return (req, res, next) => {
+        const bodySchema = typeof bodySchemaOrFn === 'function' ? bodySchemaOrFn(req) : bodySchemaOrFn;
+
         if (req.params.id !== undefined) {
             const id = objectId.safeParse(req.params.id);
             if (!id.success) {
