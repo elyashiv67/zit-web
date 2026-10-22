@@ -47,6 +47,10 @@ const UserSchema = new mongoose.Schema({
             type: ObjectId,
             ref: 'Unit',
             required: true
+        },
+        // set on every password change; logins from before it are signed out
+        pass_changed_at: {
+            type: Date
         }
     },
     {

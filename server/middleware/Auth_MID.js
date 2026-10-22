@@ -11,6 +11,32 @@ function EncWithSalt(str) {
 
 
 
+// the user object kept in the session and on req.user
+function buildSessionUser(user) {
+    return {
+        id: user.id,
+        name: user.name,
+        user_name: user.user_name,
+        TZ: user.TZ,
+        police_id: user.police_id,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        unit: user.unit,
+        is_admin: user.role.name === "admin"
+    };
+}
+
+// logged in before the password was changed -> must log in again
+function loggedInBeforePassChange(user, loginTimeMs) {
+    return user.pass_changed_at && loginTimeMs < user.pass_changed_at.getTime();
+}
+
+function endLogin(req, res) {
+    req.session.destroy(() => {});
+    res.clearCookie(cookieName);
+}
+
 async function CheckLogin(req, res, next) {
     try {
         if (!req.session.user) {
@@ -20,22 +46,25 @@ async function CheckLogin(req, res, next) {
             }
             let failReason = await LogInByCookie(req, res, next);
             if (res.LoggedIn === false) {
+                res.clearCookie(cookieName);
                 return res.status(401).json({message: `need to sign in failReason: ${failReason}`});
             }
+        } else {
+            // re-checked on every request so a deleted user is locked out right away and
+            // role / unit changes apply without logging in again
+            const user = await getUserById_auth(req.session.user.id);
+            if (!user || !user.role || !user.unit) {
+                endLogin(req, res);
+                return res.status(401).json({message: "user no longer exists, need to login"});
+            }
+            if (loggedInBeforePassChange(user, req.session.login_at ?? 0)) {
+                endLogin(req, res);
+                return res.status(401).json({message: "password was changed, need to login"});
+            }
+            req.session.user = buildSessionUser(user);
         }
-        // build req.user
-        req.user = {
-            id: req.session.user.id,
-            name: req.session.user.name,
-            user_name: req.session.user.user_name,
-            TZ: req.session.user.TZ,
-            police_id: req.session.user.police_id,
-            phone: req.session.user.phone,
-            email: req.session.user.email,
-            role: req.session.user.role,
-            unit: req.session.user.unit,
-            is_admin: req.session.user.is_admin
-        };
+
+        req.user = {...req.session.user};
 
         next();
     } catch (err) {
@@ -61,6 +90,10 @@ async function LogInByCookie(req, res, next) {
         let isExist = await getUserById_auth(user_id);
         if (!isExist) {
             return "User not found"
+        }
+        // iat is in seconds; a token from the same second as the change still counts as new
+        if (isExist.pass_changed_at && decoded.iat < Math.floor(isExist.pass_changed_at.getTime() / 1000)) {
+            return "Password was changed"
         }
         req.user = isExist;
         const logged_in = await LogIn(req, res, next);
@@ -145,33 +178,10 @@ async function SetLoginSession(req, res) {
             // return res.status(401).json({message: "not logged in , in login session"});
             return {ok: false};
         }
-        //build session user for auth
-        req.session.user = {
-            id: user.id,
-            name: user.name,
-            user_name: user.user_name,
-            TZ: user.TZ,
-            police_id: user.police_id,
-            phone: user.phone,
-            email: user.email,
-            role: user.role,
-            unit: user.unit,
-            is_admin: user.role.name === "admin"
-        };
-
-        // build req.user for model call for db
-        req.user = {
-            id: user.id,
-            name: user.name,
-            user_name: user.user_name,
-            TZ: user.TZ,
-            police_id: user.police_id,
-            phone: user.phone,
-            email: user.email,
-            role: user.role,
-            unit: user.unit,
-            is_admin: user.role.name === "admin"
-        };
+        //build session user for auth, and req.user for model call for db
+        req.session.user = buildSessionUser(user);
+        req.session.login_at = Date.now();
+        req.user = buildSessionUser(user);
         // console.log(user);
 
         return {ok: true};
@@ -205,6 +215,14 @@ async function LogIn(req, res) {
     }
 }
 
+// after users change their own password: new cookie + login time so this device stays
+// logged in while every other device has to log in again
+async function RefreshLogin(req, res) {
+    const token = await SetLoginToken(req, res);
+    req.session.login_at = Date.now();
+    return token.ok;
+}
+
 // returns the logged-in user (from the session) so the frontend can restore state on page load
 function GetMe(req, res) {
     return res.status(200).json({user: req.user});
@@ -223,4 +241,4 @@ async function LogOut(req, res) {
 
 
 
-export {CheckLogin, LogInByPass, LogOut, GetMe}
+export {CheckLogin, LogInByPass, LogOut, GetMe, RefreshLogin}

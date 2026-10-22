@@ -23,21 +23,24 @@ const api = process.env.HOST;
 
 
 
-app.use('/' , mainRoutes);
+app.use('/', mainRoutes);
 
 // unknown route -> JSON 404 instead of express's HTML page
 app.use((req, res) => {
-    res.status(404).json({message: `route not found: ${req.method} ${req.originalUrl}`});
+    res.status(404).json({ message: `route not found: ${req.method} ${req.originalUrl}` });
 });
 
 // catches malformed JSON bodies and anything thrown outside a controller's try/catch
 app.use((err, req, res, next) => {
     if (err.type === 'entity.parse.failed') {
-        return res.status(400).json({message: 'invalid JSON body'});
+        return res.status(400).json({ message: 'invalid JSON body' });
     }
     console.error(err);
-    res.status(err.status || 500).json({message: 'Server error'});
+    res.status(err.status || 500).json({ message: 'Server error' });
 });
+
+// One Docker note: behind nginx or another proxy, add app.set('trust proxy', 1) in index.js. 
+// Without it, every request looks like it comes from the proxy's IP and the per-IP limit becomes one shared limit for everyone. There's a comment about this at the top of RateLimit_MID.js.
 
 
 const start = async () => {
