@@ -52,9 +52,14 @@ server.stdout.on('data', d => { serverLog += d; });
 let exitCode = 1;
 try {
     await waitForServer(testEnv.BASE);
+    // `node tests/run.mjs` runs routes.test.mjs; `node tests/run.mjs "<command>"` runs another suite against the
+    // same seeded server (the React app's contract test: npm run test:contract in react/)
+    const custom = process.argv[2];
     exitCode = await new Promise(resolve => {
-        spawn(process.execPath, [path.join(import.meta.dirname, 'routes.test.mjs')], {cwd: SERVER_DIR, env: testEnv, stdio: 'inherit'})
-            .on('exit', code => resolve(code ?? 1));
+        const child = custom
+            ? spawn(custom, {cwd: SERVER_DIR, env: testEnv, stdio: 'inherit', shell: true})
+            : spawn(process.execPath, [path.join(import.meta.dirname, 'routes.test.mjs')], {cwd: SERVER_DIR, env: testEnv, stdio: 'inherit'});
+        child.on('exit', code => resolve(code ?? 1));
     });
 } catch (e) {
     console.error(e.message, '\n', serverLog);

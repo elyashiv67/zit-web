@@ -1,0 +1,43 @@
+.time-title { font-size: 24px; font-weight: 800; }
+
+/* the one loud thing in the app: the drift readout */
+.readout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 16px 12px 14px;
+    border-radius: var(--radius-card);
+    background: var(--well);
+    text-align: center;
+}
+.readout-direction { font-size: 16px; font-weight: 500; }
+.readout-clock {
+    font-size: clamp(44px, 14vw, 60px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: 1px;
+}
+.readout-days { font-size: 17px; font-weight: 700; }
+.readout-empty {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    font-size: 15px;
+    opacity: 0.9;
+}
+
+.time-line { width: 40%; align-self: center; margin: 8px 0; }
+
+.event-result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    padding-top: 12px;
+    border-top: 2px solid var(--red);
+    font-size: 15px;
+}
+.event-result strong { font-size: 20px; font-weight: 800; }
+
+.since-save { font-size: 20px; font-weight: 800; text-align: center; }
