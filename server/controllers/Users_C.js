@@ -3,6 +3,7 @@ import User from '../modules/users.js';
 import Role from '../modules/roles.js';
 import Unit from '../modules/units.js';
 import {startSession, endSession} from '../middleware/Auth_MID.js';
+import {findPage} from '../middleware/Paging_MID.js';
 
 // errors thrown here go to the error handler (Error_MID.js): duplicates -> 409 with `field`
 
@@ -26,9 +27,9 @@ async function countAdmins(adminRoleId) {
 // go through. So every change that removes an admin is checked again AFTER it runs, and undone
 // if no admin is left. At worst both requests undo themselves; an admin always remains.
 
+// paged (?page=&limit=), by name
 async function getAllUsers(req, res) {
-    const users = await User.find().select('-pass');
-    return res.status(200).json(users);
+    return res.status(200).json(await findPage(User, {}, req.paging, {sort: {name: 1, _id: 1}, select: '-pass'}));
 }
 
 async function getUserById(req, res) {

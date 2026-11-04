@@ -16,7 +16,7 @@ Copy `.env.example` to `.env`. Required: `PORT`, `DB`, `SESSION_SECRET`, `DVR_SE
 The server checks `.env` at startup and stops with a clear message if something is missing.
 
 `npm test` starts its own server on port 4599 against the database `zit_test` (on the same MongoDB as `DB`),
-seeds it, runs ~220 checks and drops it again. Real data is never touched.
+seeds it, runs ~235 checks and drops it again. Real data is never touched.
 
 **Behind nginx / Docker:** set `TRUST_PROXY=1` (real client IP for rate limits, and secure cookies over HTTPS).
 
@@ -44,7 +44,8 @@ Always send `credentials: 'include'` if you ever call the server on a different 
 
 | Kind | Shape |
 |---|---|
-| List | plain array `[ {...}, {...} ]` |
+| List | plain array `[ {...}, {...} ]` — except the **paged** lists below |
+| Paged list | `{ items: [...], page, limit, total, pages }` — see [Paging](#paging) |
 | Single item | plain object `{ _id, ... }` |
 | Create / update | `{ message, <entity> }` — e.g. `{ message, pin }` |
 | Delete | `{ message, id }` |
@@ -52,6 +53,21 @@ Always send `credentials: 'include'` if you ever call the server on a different 
 | Validation error | `{ message, errors: [ { path, message } ] }` |
 
 Unknown body keys are silently stripped. Strings are trimmed, `email` is lowercased.
+
+### Paging
+
+`GET /user`, `GET /timeDiff`, `GET /timeDiff/my` and `GET /timeDiff/allUnit` return one page at a time:
+
+```
+GET /timeDiff/my?page=2&limit=20
+→ { "items": [ ...20 records... ], "page": 2, "limit": 20, "total": 57, "pages": 3 }
+```
+
+- `page` — whole number from 1, default `1`. `limit` — whole number 1–100, default `20`.
+- Anything else (`page=0`, `limit=500`, `limit=abc`) → 400 `{ message }`.
+- A page past the end returns `items: []` with the real `total` — use `page < pages` to show "load more".
+- The order is stable between pages (time diffs newest first, users by name), so no item shows up twice or is skipped.
+- `/unit`, `/role` and the `/pin` lists are **not** paged: they stay plain arrays (dropdowns and the map need all of them).
 
 ### Status codes
 
@@ -129,7 +145,7 @@ Errors: 409 `{ message: "<field> already exists", field, fields }`, 400 `{ messa
 
 | Method | Path | Access | Body | Response |
 |---|---|---|---|---|
-| GET | `/user` | admin | – | array of users (`role` / `unit` as ids) |
+| GET | `/user` | admin | `?page&limit` | [paged](#paging) users by name (`role` / `unit` as ids) |
 | GET | `/user/:id` | self/admin | – | user (with `role` / `unit` populated) |
 | PATCH | `/user/:id` | self/admin | see below | `{ message, user }` |
 | PATCH | `/user/:id/password` | self/admin | `{ current_password?, new_password }` | `{ message, id }` |
@@ -265,9 +281,9 @@ Not related to pins.
 
 | Method | Path | Access | Body | Response |
 |---|---|---|---|---|
-| GET | `/timeDiff` | admin | – | array, newest first |
-| GET | `/timeDiff/my` | login | – | my history, newest first |
-| GET | `/timeDiff/allUnit` | login | – | my unit's history, newest first |
+| GET | `/timeDiff` | admin | `?page&limit` | [paged](#paging), newest first |
+| GET | `/timeDiff/my` | login | `?page&limit` | my history, [paged](#paging), newest first |
+| GET | `/timeDiff/allUnit` | login | `?page&limit` | my unit's history, [paged](#paging), newest first |
 | GET | `/timeDiff/:id` | owner/unit/admin | – | time diff |
 | POST | `/timeDiff` | login | `{ real_time, dvr_time, dvr_lastSave? }` | 201 `{ message, timeDiff }` |
 | DELETE | `/timeDiff/:id` | owner/admin | – | `{ message, id }` |

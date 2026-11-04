@@ -1,22 +1,24 @@
 import TimeDiff from '../modules/time_diff.js';
 import {getUnitId} from '../middleware/global_MID.js';
+import {findPage} from '../middleware/Paging_MID.js';
 
-// errors thrown here go to the error handler (Error_MID.js). Newest first everywhere.
+// errors thrown here go to the error handler (Error_MID.js).
+// Lists are paged (?page=&limit=, see Paging_MID.js), newest first.
+
+const NEWEST_FIRST = {createdAt: -1, _id: -1};
 
 async function getAllTimeDiffs(req, res) {
-    const diffs = await TimeDiff.find().sort({createdAt: -1});
-    return res.status(200).json(diffs);
+    return res.status(200).json(await findPage(TimeDiff, {}, req.paging, {sort: NEWEST_FIRST}));
 }
 
 // the logged-in user's own history
 async function getMyTimeDiffs(req, res) {
-    const diffs = await TimeDiff.find({owner: req.user.id}).sort({createdAt: -1});
-    return res.status(200).json(diffs);
+    return res.status(200).json(await findPage(TimeDiff, {owner: req.user.id}, req.paging, {sort: NEWEST_FIRST}));
 }
 
 async function getAllTimeDiffsByUnit(req, res) {
-    const diffs = await TimeDiff.find({assigned_unit: getUnitId(req.user)}).sort({createdAt: -1});
-    return res.status(200).json(diffs);
+    const filter = {assigned_unit: getUnitId(req.user)};
+    return res.status(200).json(await findPage(TimeDiff, filter, req.paging, {sort: NEWEST_FIRST}));
 }
 
 // the owner always (even after moving to another unit), anyone in the record's unit, or an admin

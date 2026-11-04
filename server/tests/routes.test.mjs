@@ -150,7 +150,13 @@ else { console.log('SKIP  delete role in use (user1 not created) — aborting');
 await t('login user1', u1, 'POST', '/auth/login', {username: u1Body.user_name, password: 'secret123'}, 200, d => must(d.user.is_admin === false, 'should not be admin'));
 await t('login user2', u2, 'POST', '/auth/login', {username: u2Body.user_name, password: 'secret123'}, 200);
 await t('user1 cannot use /auth/register -> 403', u1, 'POST', '/auth/register', userBody('zz', USER_ROLE, AFULA), 403);
-await t('list users (admin)', admin, 'GET', '/user', undefined, 200, d => must(Array.isArray(d) && d.every(u => !('pass' in u)), 'pass leaked'));
+await t('list users (admin)', admin, 'GET', '/user', undefined, 200, d => must(Array.isArray(d.items) && d.items.length > 0 && d.items.every(u => !('pass' in u)), 'pass leaked / no items'));
+await t('users page shape', admin, 'GET', '/user?limit=1', undefined, 200,
+    d => must(d.items.length === 1 && d.page === 1 && d.limit === 1 && d.total >= 2 && d.pages === d.total, JSON.stringify({...d, items: d.items.length})));
+{
+    const p1 = await t('users page 1', admin, 'GET', '/user?limit=1&page=1', undefined, 200);
+    await t('users page 2 is a different user', admin, 'GET', '/user?limit=1&page=2', undefined, 200, d => must(d.items[0]?._id !== p1.data.items[0]?._id, 'same user on 2 pages'));
+}
 await t('list users (user) -> 403', u1, 'GET', '/user', undefined, 403);
 await t('get self', u1, 'GET', `/user/${ids.u1}`, undefined, 200, d => must(d._id === ids.u1 && !('pass' in d) && d.role?.name === 'user', 'bad user'));
 await t('get other user -> 403', u1, 'GET', `/user/${ids.u2}`, undefined, 403);
@@ -176,7 +182,7 @@ await t('admin moves user1 to unit B', admin, 'PATCH', `/user/${ids.u1}`, {unit:
 await t('user1 /me shows unit B without relogin', u1, 'GET', '/auth/me', undefined, 200, d => must(d.user.unit._id === ids.unitB, `unit ${d.user.unit?._id}`));
 await t('admin moves user1 back to Afula', admin, 'PATCH', `/user/${ids.u1}`, {unit: AFULA}, 200);
 await t('admin makes user1 admin', admin, 'PATCH', `/user/${ids.u1}`, {role: ADMIN_ROLE}, 200);
-await t('user1 is admin immediately (GET /user)', u1, 'GET', '/user', undefined, 200, isArr);
+await t('user1 is admin immediately (GET /user)', u1, 'GET', '/user', undefined, 200, d => isArr(d.items));
 await t('admin makes user1 user again', admin, 'PATCH', `/user/${ids.u1}`, {role: USER_ROLE}, 200);
 await t('user1 lost admin immediately -> 403', u1, 'GET', '/user', undefined, 403);
 const u4 = new Client('user4'), u4Body = userBody('u4', USER_ROLE, AFULA);
@@ -280,10 +286,19 @@ for (const bad of [null, true, 0, 1700000000000, '2026-10-21T10:00:00', '2026-13
 r = await t('date with +03:00 offset is converted', u1, 'POST', '/timeDiff', {real_time: '2026-10-21T13:00:00+03:00', dvr_time: '2026-10-21T10:00:00Z'}, 201,
     d => must(d.timeDiff.offset_ms === 0, `offset ${d.timeDiff.offset_ms}`));
 await t('remove it', u1, 'DELETE', `/timeDiff/${r.data.timeDiff?._id}`, undefined, 200);
-await t('my history (newest first)', u1, 'GET', '/timeDiff/my', undefined, 200, d => must(d.length === 2 && d[0]._id === ids.td2, 'wrong order/count'));
-await t('unit history', u1, 'GET', '/timeDiff/allUnit', undefined, 200, d => must(d.some(x => x._id === ids.td1) && !d.some(x => x._id === ids.td3), 'unit filter wrong'));
+await t('my history (newest first)', u1, 'GET', '/timeDiff/my', undefined, 200, d => must(d.items.length === 2 && d.total === 2 && d.items[0]._id === ids.td2, 'wrong order/count'));
+await t('unit history', u1, 'GET', '/timeDiff/allUnit', undefined, 200, d => must(d.items.some(x => x._id === ids.td1) && !d.items.some(x => x._id === ids.td3), 'unit filter wrong'));
 await t('all history (user) -> 403', u1, 'GET', '/timeDiff', undefined, 403);
-await t('all history (admin)', admin, 'GET', '/timeDiff', undefined, 200, d => must(d.length >= 3, 'missing'));
+await t('all history (admin)', admin, 'GET', '/timeDiff', undefined, 200, d => must(d.items.length >= 3 && d.total >= 3, 'missing'));
+await t('default page is 1, limit 20', u1, 'GET', '/timeDiff/my', undefined, 200, d => must(d.page === 1 && d.limit === 20 && d.pages === 1, 'wrong defaults'));
+await t('history page 1 of 2 (newest)', u1, 'GET', '/timeDiff/my?limit=1&page=1', undefined, 200,
+    d => must(d.items.length === 1 && d.items[0]._id === ids.td2 && d.total === 2 && d.pages === 2, 'wrong page 1'));
+await t('history page 2 of 2 (older)', u1, 'GET', '/timeDiff/my?limit=1&page=2', undefined, 200, d => must(d.items.length === 1 && d.items[0]._id === ids.td1, 'wrong page 2'));
+await t('page past the end -> empty items', u1, 'GET', '/timeDiff/my?page=9', undefined, 200, d => must(d.items.length === 0 && d.total === 2, 'not empty'));
+for (const q of ['page=0', 'page=-1', 'page=1.5', 'page=abc', 'limit=0', 'limit=101', 'limit=x'])
+    await t(`bad paging ?${q} -> 400`, u1, 'GET', `/timeDiff/my?${q}`, undefined, 400);
+await t('bad paging on /user -> 400', admin, 'GET', '/user?limit=500', undefined, 400);
+await t('limit=100 is allowed', u1, 'GET', '/timeDiff/allUnit?limit=100', undefined, 200, d => must(d.limit === 100, 'limit'));
 await t('get diff same unit', u1, 'GET', `/timeDiff/${ids.td1}`, undefined, 200);
 await t('get diff other unit -> 403', u2, 'GET', `/timeDiff/${ids.td1}`, undefined, 403);
 await t('get diff missing -> 404', u1, 'GET', `/timeDiff/${FAKE_ID}`, undefined, 404);
