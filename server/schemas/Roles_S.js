@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {atLeastOneField} from './common_S.js';
 
 const roleKeys = {
-    level: z.number(),
+    level: z.number().int().positive(),
     name: z.enum(['admin', 'user']),
 };
 

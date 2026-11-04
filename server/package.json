@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "node tests/run.mjs"
   },
   "keywords": [],
   "author": "",
@@ -13,17 +14,19 @@
   "type": "module",
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.7",
+    "connect-mongo": "^6.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.1",
     "express-session": "^1.19.0",
-    "jsonwebtoken": "^9.0.3",
+    "helmet": "^8.3.0",
     "mongoose": "^9.9.3",
     "morgan": "^1.11.0",
     "multer": "^2.4.0",
-    "nodemon": "^3.1.14",
     "sharp": "^0.35.5",
     "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

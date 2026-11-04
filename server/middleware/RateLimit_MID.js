@@ -20,7 +20,7 @@ function limiter(limit, keyGenerator) {
 // per username from one IP: stops guessing one user's password
 // without locking out everyone else in the same office (same IP)
 const loginLimiter = limiter(5, req => {
-    const username = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
+    const username = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
     return `${ipKeyGenerator(req.ip)}:${username}`;
 });
 

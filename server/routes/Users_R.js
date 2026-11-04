@@ -5,10 +5,12 @@ import {CheckLogin} from "../middleware/Auth_MID.js";
 import {validate} from "../middleware/Validate_MID.js";
 import {adminUpdateUserSchema, changePasswordSchema, updateUserSchema} from "../schemas/Users_S.js";
 import {passwordLimiter} from "../middleware/RateLimit_MID.js";
+import {paging} from "../middleware/Paging_MID.js";
 
 const router = express.Router();
 
-router.get('/', CheckLogin, isAdmin, getAllUsers);
+// paged: ?page=1&limit=20 -> {items, page, limit, total, pages}
+router.get('/', CheckLogin, isAdmin, paging, getAllUsers);
 router.get('/:id', CheckLogin, validate(), isSelfOrAdmin, getUserById);
 // admins may also change role / unit / user_name / TZ / police_id
 router.patch("/:id", CheckLogin, validate(req => req.user.is_admin ? adminUpdateUserSchema : updateUserSchema), isSelfOrAdmin, updateUser);

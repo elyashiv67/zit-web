@@ -3,7 +3,7 @@ import {objectId, atLeastOneField} from './common_S.js';
 
 const userKeys = {
     name: z.string().trim().min(1).max(100),
-    user_name: z.string().trim().min(1).max(100),
+    user_name: z.string().trim().toLowerCase().min(1).max(100), // case-insensitive: Admin = admin
     pass: z.string().min(6).max(100),
     TZ: z.string().trim().min(1),
     police_id: z.string().trim().min(1),

@@ -1,103 +1,42 @@
 import Role from "../modules/roles.js";
 import User from "../modules/users.js";
 
-async function getAllRoles(req, res) {
-    try {
-        const roles = await Role.find();
+// errors thrown here go to the error handler (Error_MID.js): duplicates -> 409, bad ids -> 400
 
-        return res.status(200).json(roles);
-    } catch (err) {
-        return res.status(500).json({message: `An error occurred: ${err} in all role`});
-    }
+async function getAllRoles(req, res) {
+    const roles = await Role.find();
+    return res.status(200).json(roles);
 }
 
 async function getRoleById(req, res) {
-    try {
-        const id = req.valid_id;
-        const role = await Role.findById(id);
-
-        if (!role) {
-            return res.status(404).json({message: "No role found"});
-        }
-        return res.status(200).json(role);
-    } catch (e) {
-        return res.status(500).json({message: `Server error: ${e.message} in role id`});
-    }
+    const role = await Role.findById(req.valid_id);
+    if (!role)
+        return res.status(404).json({message: "Role not found"});
+    return res.status(200).json(role);
 }
 
 async function createRole(req, res) {
-    try {
-        const {name, level} = req.valid_body;
-        const role = await Role.create({name, level});
-
-
-        return res.status(201).json({
-            message: "role added successfully",
-            role: role
-        });
-
-    } catch (e) {
-        if (e.code === 11000) {
-            const field = Object.keys(e.keyPattern)[0];
-            return res.status(409).json({message: `${field} already exists`, field});
-        }
-        return res.status(500).json({message: `Server error: ${e.message}`});
-    }
+    const role = await Role.create(req.valid_body);
+    return res.status(201).json({message: "Role added successfully", role});
 }
 
 async function updateRole(req, res) {
-    try {
-        const id = req.valid_id;
-        const {name, level} = req.valid_body;
-        const updatedData = {
-            ...(name !== undefined && {name}),
-            ...(level !== undefined && {level})
-        }
-
-        const updatedRole = await Role.findByIdAndUpdate(
-            id,
-            updatedData,
-            {new: true, runValidators: true}
-        );
-
-        if (!updatedRole) {
-            return res.status(404).json({message: 'Role not found'});
-        }
-
-        return res.status(200).json({
-            message: 'Role updated successfully',
-            role: updatedRole
-        });
-    } catch (e) {
-        if (e.code === 11000) {
-            const field = Object.keys(e.keyPattern)[0];
-            return res.status(409).json({message: `${field} already exists`, field});
-        }
-        return res.status(500).json({message: `Role not updated ${e.message}`});
-    }
+    const updatedRole = await Role.findByIdAndUpdate(req.valid_id, req.valid_body, {returnDocument: 'after', runValidators: true});
+    if (!updatedRole)
+        return res.status(404).json({message: 'Role not found'});
+    return res.status(200).json({message: 'Role updated successfully', role: updatedRole});
 }
 
 async function deleteRole(req, res) {
-    try {
-        const id = req.valid_id;
+    const id = req.valid_id;
 
-        const inUse = await User.exists({role: id});
-        if (inUse) {
-            return res.status(409).json({message: 'Cannot delete role: still assigned to one or more users'});
-        }
+    if (await User.exists({role: id}))
+        return res.status(409).json({message: 'Cannot delete role: still assigned to one or more users'});
 
-        const deletedRole = await Role.findByIdAndDelete(id, {});
-        if (!deletedRole) {
-            return res.status(404).json({message: 'Role not found'});
-        }
-        return res.status(200).json({
-            message: 'Role deleted successfully',
-            id: deletedRole._id
-        });
-    } catch (e) {
-        return res.status(500).json({message: `Server error: ${e.message}`});
-    }
+    const deletedRole = await Role.findByIdAndDelete(id);
+    if (!deletedRole)
+        return res.status(404).json({message: 'Role not found'});
+    return res.status(200).json({message: 'Role deleted successfully', id: deletedRole._id});
 }
 
-export {getAllRoles, getRoleById, createRole, updateRole, deleteRole}
-
+export {getAllRoles, getRoleById, createRole, updateRole, deleteRole};

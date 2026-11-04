@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import {encrypt, decrypt} from "../config/secretBox.js";
 
 const ObjectId = mongoose.Schema.Types.ObjectId;
 
@@ -36,9 +37,12 @@ const PinSchema = new mongoose.Schema({
         user_name: {
             type: String
         },
+        // encrypted in the DB, decrypted when sent (only GET /pin/:id selects it)
         password: {
             type: String,
-            select: false
+            select: false,
+            set: encrypt,
+            get: decrypt
         }
     },
     assigned_unit: {
@@ -48,8 +52,13 @@ const PinSchema = new mongoose.Schema({
     }
 },
     {
-        timestamps: true
+        timestamps: true,
+        id: false, // no extra "id" next to _id when getters are applied
+        toJSON: {getters: true}
     }
 );
+
+// every unit list (GET /pin/allUnit) searches by unit
+PinSchema.index({assigned_unit: 1});
 
 export default mongoose.model("Pin", PinSchema);
