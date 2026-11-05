@@ -35,7 +35,7 @@ read it before working, and update the "Status" and "Next" sections when somethi
   replaced whole on PATCH, `null` removes it. No marker = the plain red dot.
 - Job titles (`/jobTitle`, admin-managed list, Hebrew sort) are separate from the role. Every user has a required
   `job_title`; `/auth/me` returns `job_title: {_id, name}`. Regular users see their title, never admin/user.
-  `scripts/add-job-titles.mjs` gave the 3 real users "חוקר זיט" on 2026-11-05 (safe to rerun).
+  `scripts/add-job-titles.mjs` (local only, gitignored) gave the 3 real users "חוקר זיט" on 2026-11-05 (safe to rerun).
 - `npm run dev` (port 4586), `npm test` (299 end-to-end checks on `zit_test`).
   `node tests/run.mjs "<command>"` runs another suite against the seeded test server (it also seeds a job title, `JOB_TITLE`).
 - **Run the server with `npm run dev`** (nodemon). `npm start` does not reload, so code changes don't apply until a restart.
@@ -72,8 +72,8 @@ read it before working, and update the "Status" and "Next" sections when somethi
 - Server: merged to main (PR #13, paging). Branch `start-front` holds the frontend work. **Commit it before switching machines.**
 - Frontend: all pages built. 141/141 UI tests, 12/12 contract tests, lint clean, build OK.
 - 2026-11-05: pin markers (8 icons × 8 colors, picker in the pin form) and job titles (admin "תפקידים" tab, required
-  per user, shown in the profile instead of the permission). Design: `docs/superpowers/specs/2026-11-05-pin-icons-and-job-titles-design.md`,
-  plan: `docs/superpowers/plans/2026-11-05-pin-icons-and-job-titles.md`. Checked in a real browser at phone size.
+  per user, shown in the profile instead of the permission). Checked in a real browser at phone size.
+- Local only (gitignored, not on GitHub): `docs/` (design + plan files), `server/postman/`, `server/scripts/`.
 - 2026-11-05 (owner's phone review): name on time diffs (required to save, history title), bigger offset readout,
   DVR owner on pins (form, detail card with tap-to-call, search by owner), bigger map on the pins list; the list opens with a button; pin names show under the dots (hidden when zoomed far out).
   Unused MUI / emotion / react-router-dom packages were removed.
