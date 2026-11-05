@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ZitWeb Frontend Report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: one reading column; a slate "results" band up top, then sections in the app's own palette */
+:root {
+    --red: #D54845;
+    --brown: #704A42;
+    --slate: #3E4D53;
+    --steel: #A6A9B1;
+    --paper: #F5F6F6;
+    --ink: #050510;
+
+    --bg: #ECEDEF;
+    --fg: #14161c;
+    --muted: #4a5257;
+    --card: #ffffff;
+    --line: #d4d6da;
+    --band: var(--slate);
+    --band-fg: var(--paper);
+    --ok: #2f7a4a;
+    --warn: #8a5a12;
+    --accent-text: #b8322f;
+    --font: 'Heebo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #0b0c14; --fg: #eceef0; --muted: #b3b8bd; --card: #171a22; --line: #2b3038;
+        --band: #26333a; --band-fg: var(--paper); --ok: #7fd09c; --warn: #f0c27a; --accent-text: #ff8c89;
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --bg: #0b0c14; --fg: #eceef0; --muted: #b3b8bd; --card: #171a22; --line: #2b3038;
+    --band: #26333a; --band-fg: var(--paper); --ok: #7fd09c; --warn: #f0c27a; --accent-text: #ff8c89;
+    color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 860px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; }
+h1, h2, h3 { line-height: 1.2; text-wrap: balance; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+code { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 0.9em; background: color-mix(in srgb, var(--steel) 22%, transparent); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+a { color: var(--accent-text); }
+.nums { font-variant-numeric: tabular-nums; }
+
+/* results band */
+.band { background: var(--band); color: var(--band-fg); }
+.band .wrap { padding-block: 40px 36px; display: flex; flex-direction: column; gap: 22px; }
+.kicker { display: flex; align-items: center; gap: 10px; font-weight: 500; opacity: 0.9; }
+.kicker::before { content: ""; width: 28px; height: 2px; background: var(--red); box-shadow: 0 0 10px rgba(213, 72, 69, 0.6); }
+.band h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 800; }
+.band .lede { font-size: 18px; opacity: 0.92; }
+.results { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.result { background: rgba(5, 5, 16, 0.35); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.result b { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.result span { font-size: 14px; opacity: 0.9; }
+.result.warn b { color: #f0c27a; }
+
+main.wrap { display: flex; flex-direction: column; gap: 44px; padding-top: 40px; }
+section { display: flex; flex-direction: column; gap: 14px; }
+section > h2 { font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+section > h2::before { content: ""; width: 4px; height: 22px; border-radius: 2px; background: var(--red); }
+.muted { color: var(--muted); }
+
+.table-box { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 700; font-size: 14px; color: var(--muted); }
+tr:last-child td { border-bottom: none; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.he { direction: rtl; unicode-bidi: isolate; font-weight: 500; }
+
+.pill { display: inline-block; font-size: 13px; font-weight: 700; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.open { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.pill.login { background: color-mix(in srgb, var(--steel) 30%, transparent); color: var(--fg); }
+.pill.admin { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--accent-text); }
+.pill.pass { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.pill.flaky { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+
+.list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.list li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.list li strong { font-weight: 700; }
+
+.callout { border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--card)); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.callout h3 { font-size: 17px; }
+
+.steps { counter-reset: s; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: start; }
+.steps li::before { content: counter(s); width: 26px; height: 26px; border-radius: 50%; background: var(--slate); color: var(--paper); font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+
+pre { margin: 0; overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 1.55; }
+pre code { background: none; padding: 0; }
+.copy-row { display: flex; justify-content: flex-end; }
+button.copy { font: inherit; font-size: 14px; font-weight: 700; padding: 6px 14px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; }
+button.copy:focus-visible, a:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<header class="band">
+    <div class="wrap">
+        <span class="kicker">ZitWeb · react/ · option A</span>
+        <h1>The app is built, and every page is tested</h1>
+        <p class="lede">The time diff calculator opens first and stays open to everyone. Pins, history, profile and admin need a login. Loading skeletons appear only when a load takes longer than 300ms, and empty states use icons instead of text.</p>
+        <div class="results">
+            <div class="result"><b>108 / 108</b><span>UI tests passing (fake server)</span></div>
+            <div class="result"><b>12 / 12</b><span>Contract tests against the real server</span></div>
+            <div class="result"><b>0</b><span>Lint errors. Production build succeeds</span></div>
+            <div class="result warn"><b>232–233 / 234</b><span>Server suite: /health flake on Atlas, details below</span></div>
+        </div>
+    </div>
+</header>
+
+<main class="wrap">
+
+    <section aria-labelledby="pages">
+        <h2 id="pages">Pages</h2>
+        <div class="table-box">
+            <table>
+                <thead><tr><th>Route</th><th>Page</th><th>Access</th><th>What it does</th></tr></thead>
+                <tbody>
+                    <tr><td><code>/</code></td><td class="he">הפרש זמנים</td><td><span class="pill open">everyone</span></td><td>DVR time vs real time, with a big readout of how far the DVR is ahead or behind. The event calculator fills the other box by itself, and there's "days since the last DVR save". Values survive a trip to the login page. Logged-in users can save the result to their history.</td></tr>
+                    <tr><td><code>/login</code></td><td class="he">התחברות</td><td><span class="pill open">everyone</span></td><td>Returns you to the page that asked for the login. Server errors show in Hebrew. <code>?next=</code> can't send you to another site.</td></tr>
+                    <tr><td><code>/pins</code></td><td class="he">נקודות</td><td><span class="pill login">login</span></td><td>OpenStreetMap map with every pin in the unit, search, and rows with a thumbnail (or an icon when there's no photo). Admins can switch to all units.</td></tr>
+                    <tr><td><code>/pins/new</code>, <code>/pins/:id/edit</code></td><td class="he">נקודה חדשה / עריכה</td><td><span class="pill login">login</span></td><td>Pick the location on the map or with "my location". Optional DVR user and password. Photos can be added while creating. Editing sends only the fields that changed, and an emptied DVR field is removed.</td></tr>
+                    <tr><td><code>/pins/:id</code></td><td class="he">פרטי נקודה</td><td><span class="pill login">login</span></td><td>Navigate with Waze, DVR password hidden until you tap it (with copy), photo gallery with uploads (placeholder tiles while uploading), lightbox, delete photo or pin after a confirmation.</td></tr>
+                    <tr><td><code>/history</code></td><td class="he">היסטוריה</td><td><span class="pill login">login</span></td><td>Mine / whole unit, 20 per page with "load more". Only your own records (or any, for an admin) can be deleted.</td></tr>
+                    <tr><td><code>/profile</code></td><td class="he">פרופיל</td><td><span class="pill login">login</span></td><td>Your details, edit name, phone and email, change password (other devices get signed out), log out.</td></tr>
+                    <tr><td><code>/admin</code></td><td class="he">ניהול</td><td><span class="pill admin">admin</span></td><td>Users: create, edit role or unit, reset password, delete (not yourself). Units: add, edit, delete. The server's last-admin and unit-in-use errors show in Hebrew.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section aria-labelledby="how">
+        <h2 id="how">How it's built</h2>
+        <ul class="list">
+            <li><strong>One API client</strong> <span class="muted"><code>src/api/client.js</code> sends the cookie, handles JSON and photo uploads, and turns server errors into Hebrew messages (for example "שם המשתמש כבר קיים במערכת" on a duplicate). Every 401 signs the user out of the app. A 503 never does.</span></li>
+            <li><strong>Login state</strong> <span class="muted"><code>AuthContext</code> asks <code>/auth/me</code> once. <code>RequireAuth</code> guards every page except <code>/</code> and <code>/login</code>. If the server can't be reached, protected pages show a retry, while the calculator keeps working.</span></li>
+            <li><strong>Skeletons only when needed</strong> <span class="muted"><code>useDelayedFlag</code> shows a skeleton only after 300ms, so a fast load doesn't flash grey. A test checks that 50ms shows nothing and 400ms shows the skeleton.</span></li>
+            <li><strong>Icons, no text placeholders</strong> <span class="muted">Lucide icons: no photo → an "image off" icon, empty unit → "map pin off", empty history → "history", no connection → "wifi off". Every icon-only button has a Hebrew <code>aria-label</code>.</span></li>
+            <li><strong>Your colors only</strong> <span class="muted">Red, brown, grey, slate, off-white and ink from the old <code>colors.js</code>, now CSS variables in <code>index.css</code>. Text on the grey background uses ink instead of slate, for contrast. Heebo ships with the app (no Google request), and every time uses fixed-width digits.</span></li>
+            <li><strong>Hebrew and phones</strong> <span class="muted"><code>&lt;html lang="he" dir="rtl"&gt;</code>, bottom tab bar on phones that moves into the header on wide screens, 44px+ touch targets, native date/time pickers, phone safe areas.</span></li>
+            <li><strong>Map loads only where needed</strong> <span class="muted">Leaflet is about 155 KB, so it loads only on map pages.</span></li>
+        </ul>
+    </section>
+
+    <section aria-labelledby="tests">
+        <h2 id="tests">Tests</h2>
+        <p class="muted">Vitest with Testing Library. The tests click and type like a user (finding elements by label and role) against a fake API that records every request. The contract test then runs the app's own API client against a real server on the separate <code>zit_test</code> database.</p>
+        <div class="table-box">
+            <table>
+                <thead><tr><th>File</th><th>Covers</th><th>Tests</th><th>Result</th></tr></thead>
+                <tbody>
+                    <tr><td><code>lib/timeMath.test.js</code></td><td>Ahead / behind / synced, multi-day, Israel DST change, event time both ways, date-input conversion</td><td class="num">17</td><td><span class="pill pass">passed</span></td></tr>
+                    <tr><td><code>lib/validation.test.js</code></td><td>Same rules as the server's Zod schemas: pins, users, passwords, units</td><td class="num">13</td><td><span class="pill pass">passed</span></td></tr>
+                    <tr><td><code>api/client.test.js</code></td><td>Cookie, JSON vs FormData, Hebrew errors, 401 vs 503, no network</td><td class="num">8</td><td><span class="pill pass">passed</span></td></tr>
+                    <tr><td><code>pages/TimeDiffPage.test.jsx</code></td><td>Public page, readout, "now" button, event calculator, last save, save to history, values kept in session</td><td class="num">10</td><td><span class="pill pass">passed</span></td></tr>
+                    <tr><td><code>auth/auth.test.jsx</code></td><td>6 protected routes redirect, login returns to the page, wrong password, rate limit, safe <code>next</code>, admin guard, session ending elsewhere, offline, logout</td><td class="num">19</td><td><span class="pill pass">passed</span></td></tr>
+                    <tr><td><code>pages/pins.test.jsx</code></td><td>List and map, icons, search, retry, admin scope, skeleton timing, details, DVR copy, upload, 10-photo limit, deletes, 404/403, form create and edit</td><td class="num">24</td><td><span class="pill pass">passed</span></td></tr>
+                    <tr><td><code>pages/account.test.jsx</code></td><td>History paging, unit tab, delete. Profile edits and password. Admin users and units, last-admin 409, Esc to close</td><td class="num">17</td><td><span class="pill pass">passed</span></td></tr>
+                    <tr><td><code>test/contract.test.js</code></td><td>Real server: login cookie, user shape, register and duplicate, paging, DVR encrypt/decrypt/clear, real photo upload and download, time diff offset round trip, 403, logout</td><td class="num">12</td><td><span class="pill pass">passed</span></td></tr>
+                    <tr><td><code>server npm test</code></td><td>The existing 234-check server suite, rerun because I changed its runner</td><td class="num">234</td><td><span class="pill flaky">232–233 pass</span></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section aria-labelledby="found">
+        <h2 id="found">What the tests caught (fixed)</h2>
+        <ul class="list">
+            <li><strong>Screen readers heard the error as part of the dropdown's name</strong> <span class="muted">In the admin form, the error text sat inside the <code>&lt;label&gt;</code>, so the role field was read as "תפקיד צריך לבחור תפקיד". The error is now outside the label and linked with <code>aria-describedby</code>.</span></li>
+            <li><strong>Logout could land on the login page instead of the calculator</strong> <span class="muted">The protected-page guard reacted before the navigation to <code>/</code>. Logout now leaves the protected page first, then ends the session.</span></li>
+            <li><strong>Two "add pin" buttons on an empty unit</strong> <span class="muted">The round button is hidden when the empty state already offers one.</span></li>
+        </ul>
+    </section>
+
+    <section aria-labelledby="open">
+        <h2 id="open">Still open</h2>
+        <div class="callout">
+            <h3>Server suite: /health fails under bursts of requests on Atlas</h3>
+            <p>On 4 runs today, 1–4 checks failed, always the <code>/health</code> readiness check, right after the parallel uploads or the "two admins demote each other" race. The server log shows <code>MongoDB disconnected</code> at that moment. An idle connection stayed up for 90 seconds, a bigger Node thread pool didn't help, and the server code hasn't changed since your commit <code>868d5cb</code>, which passed 234/234. All the actual behavior checks pass. My read is that the shared Atlas cluster briefly drops the connection under bursts. Run <code>npm test</code> again on your local Docker Mongo to confirm; if it still fails there, it's worth digging into.</p>
+        </div>
+        <ul class="list">
+            <li><strong>Not checked by eye</strong> <span class="muted">This session has no browser tool, so the layout was checked by the build and the tests, not by looking at it. Open it on your phone, and send me a screenshot if anything looks off.</span></li>
+            <li><strong>Unused packages: removed</strong> <span class="muted"><code>@mui/material</code>, <code>@mui/x-date-pickers</code>, <code>@emotion/*</code> and <code>react-router-dom</code> are uninstalled. Build, lint and the 108 tests still pass.</span></li>
+            <li><strong>GitHub Pages deploy</strong> <span class="muted">Set <code>VITE_API_URL</code> to the server address, plus the CORS / SameSite change I saved for "after the frontend".</span></li>
+            <li><strong>Map tiles</strong> <span class="muted">They come from openstreetmap.org, so the map needs internet. Everything else works offline against a local server.</span></li>
+        </ul>
+    </section>
+
+    <section aria-labelledby="run">
+        <h2 id="run">Run it</h2>
+        <ol class="steps">
+            <li><span>Server: <code>cd server</code>, then <code>npm run dev</code> (port 4586).</span></li>
+            <li><span>App: <code>cd react</code>, then <code>npm run dev</code>, and open <code>http://localhost:5173/zit-web/</code>. Vite forwards <code>/api</code> to the server.</span></li>
+            <li><span>Tests: <code>npm test</code> in <code>react/</code> (fake server, about 10s). <code>npm run test:contract</code> starts a real server on <code>zit_test</code> and drops that database afterwards.</span></li>
+        </ol>
+    </section>
+
+    <section aria-labelledby="commit">
+        <h2 id="commit">Commit message</h2>
+        <p class="muted">Nothing is committed. The old <code>featuers/</code>, <code>Pages/</code>, <code>AppLayout/</code>, <code>Router/</code>, <code>constants/</code> and <code>theme.js</code> files are deleted from disk (their logic moved to the new structure), so <code>git add -A react server/tests/run.mjs</code> picks up the deletions too.</p>
+        <pre><code id="commit-text">build the app on option A: public time diff, login-protected pins/history/profile/admin
+
+- time diff calculator is the open home page; save to history when logged in
+- login with return-to-page, session guard, Hebrew server errors
+- pins: OpenStreetMap map, search, details with DVR copy, photo upload/gallery/delete, create/edit form
+- history (paged), profile (details + password), admin (users + units)
+- skeletons only after 300ms, icons for empty states, RTL, phone bottom nav
+- 108 UI tests (vitest + testing library) + 12 contract tests against the real server
+- server/tests/run.mjs can run another suite on the seeded test server</code></pre>
+        <div class="copy-row"><button type="button" class="copy" id="copy-btn">Copy message</button></div>
+    </section>
+
+</main>
+
+<script>
+document.getElementById('copy-btn').addEventListener('click', async e => {
+    const text = document.getElementById('commit-text').innerText;
+    try {
+        await navigator.clipboard.writeText(text);
+        e.target.textContent = 'Copied';
+    } catch {
+        const range = document.createRange();
+        range.selectNodeContents(document.getElementById('commit-text'));
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        e.target.textContent = 'Selected, press Ctrl+C';
+    }
+});
+</script>
+</body>
+</html>

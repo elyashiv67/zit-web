@@ -1,20 +1,14 @@
-import './App.css';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { RouterProvider } from "react-router";
-import Router from "./Router/Main_R.jsx";
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import { darkTheme } from './theme';
+import {RouterProvider} from 'react-router';
+import {AuthProvider} from './auth/AuthContext.jsx';
+import {ToastProvider} from './components/Toast.jsx';
+import {router} from './router.jsx';
 
-function App() {
-  return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <RouterProvider router={Router} />
-      </LocalizationProvider>
-    </ThemeProvider>
-  )
+export default function App() {
+    return (
+        <AuthProvider>
+            <ToastProvider>
+                <RouterProvider router={router} />
+            </ToastProvider>
+        </AuthProvider>
+    );
 }
-
-export default App;

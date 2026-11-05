@@ -1,0 +1,29 @@
+.profile-head { justify-content: flex-start; }
+.avatar {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--red);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 800;
+}
+.profile-contact { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.profile-contact > span { display: inline-flex; align-items: center; gap: 4px; }
+
+.details { margin: 0; display: flex; flex-direction: column; }
+.details-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--hairline);
+}
+.details-row:last-child { border-bottom: none; }
+.details-row dt { display: flex; align-items: center; gap: 8px; font-size: 15px; opacity: 0.9; }
+.details-row dd { margin: 0; font-size: 16px; font-weight: 700; text-align: end; }

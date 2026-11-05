@@ -1,0 +1,114 @@
+.app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.skip-link {
+    position: absolute;
+    inset-inline-start: 8px;
+    top: -60px;
+    z-index: 1100;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--red);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+}
+.skip-link:focus { top: 8px; }
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    height: var(--header-h);
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--overlay);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--hairline);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--paper);
+    text-decoration: none;
+}
+.brand-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    filter: drop-shadow(0 0 6px rgba(213, 72, 69, 0.6));
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand-name { font-size: 20px; font-weight: 800; letter-spacing: 0.3px; }
+.brand-unit { font-size: 13px; opacity: 0.85; }
+
+.app-main {
+    flex: 1;
+    width: 100%;
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--paper);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+}
+.nav-link.active { color: #ff8c89; font-weight: 700; }
+
+/* phones: bottom tab bar */
+.nav-top { display: none; }
+.nav-bottom {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 1000;
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    background: rgba(5, 5, 16, 0.94);
+    border-top: 1px solid var(--hairline);
+}
+.nav-bottom .nav-link {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    font-size: 12px;
+    border-top: 2px solid transparent;
+}
+.nav-bottom .nav-link.active { border-top-color: var(--red); }
+
+/* wide screens: the same links sit in the header */
+@media (min-width: 900px) {
+    .nav-bottom { display: none; }
+    .nav-top { display: flex; gap: 28px; }
+    .nav-top .nav-link { position: relative; padding: 8px 0; }
+    .nav-top .nav-link::after {
+        content: '';
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        height: 2px;
+        background: var(--red);
+        transform: scaleX(0);
+        transition: transform 0.3s var(--ease);
+    }
+    .nav-top .nav-link.active::after, .nav-top .nav-link:hover::after { transform: scaleX(1); }
+    .app-main { padding-bottom: 0; }
+    .toast-stack { bottom: 24px; }
+    .app-header { padding: 0 32px; }
+}

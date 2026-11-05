@@ -15,4 +15,11 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.jsx'],
+    css: false,
+    // the users are in Israel; DST tests depend on it
+    env: { TZ: 'Asia/Jerusalem' },
+  },
 })

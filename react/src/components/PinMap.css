@@ -1,0 +1,19 @@
+.pin-map {
+    border-radius: var(--radius-section);
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    /* keep Leaflet's own panes under the sticky header and the bottom nav */
+    position: relative;
+    z-index: 0;
+}
+
+.map-pin {
+    border-radius: 50%;
+    background: var(--red);
+    border: 3px solid var(--paper);
+    box-shadow: 0 2px 8px rgba(5, 5, 16, 0.5);
+}
+.map-pin-picked { box-shadow: 0 0 0 6px rgba(213, 72, 69, 0.35); }
+
+.map-popup-link { font-family: 'Heebo', sans-serif; font-weight: 700; font-size: 15px; color: var(--surface); }
