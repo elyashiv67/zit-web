@@ -37,9 +37,10 @@ async function getTimeDiffById(req, res) {
 }
 
 async function addTimeDiff(req, res) {
-    const {real_time, dvr_time, dvr_lastSave} = req.valid_body;
+    const {name, real_time, dvr_time, dvr_lastSave} = req.valid_body;
 
     const newDiff = await TimeDiff.create({
+        name,
         owner: req.user.id,
         assigned_unit: getUnitId(req.user),
         real_time,

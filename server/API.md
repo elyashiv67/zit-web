@@ -219,12 +219,16 @@ Body:
 {
   "name": "string 1-100",
   "location": { "lat": -90..90, "lng": -180..180 },
-  "dvr": { "user_name": "optional", "password": "optional" }
+  "dvr": { "user_name": "optional", "password": "optional" },
+  "dvr_owner": { "name": "string 1-100", "id_number": "optional, 1-9 digits", "phone": "optional, 1-10 digits", "notes": "optional, 1-500" }
 }
 ```
 
 - `dvr` is optional. On PATCH, a dvr key that isn't sent is kept, and `null` removes it:
   `dvr: { password: "new" }` changes only the password, `dvr: { password: null }` removes it.
+- `dvr_owner` (who owns the DVR, e.g. the shop owner) is optional; when sent, `name` is required.
+  On PATCH it is **replaced as a whole** (a key that isn't sent is removed), and `dvr_owner: null` removes the owner.
+  It is returned in the lists too (only the DVR password is hidden there).
 - `dvr.password` is stored **encrypted** (AES-256-GCM, key `DVR_SECRET`) and decrypted only in `GET /pin/:id`.
 - Set by the server, never from the body: `creator` (user id), `creator_name` (kept even if the user is deleted), `assigned_unit`, `image`.
 - `dvr.password` is only returned by `GET /pin/:id`, not in the lists.
@@ -236,6 +240,7 @@ Pin object:
   "_id": "…", "name": "…",
   "location": { "lat": 32.6, "lng": 35.3 },
   "dvr": { "user_name": "…" },
+  "dvr_owner": { "name": "…", "id_number": "…", "phone": "…", "notes": "…" },
   "image": ["<uuid>.jpg"],
   "creator": "<user id>", "creator_name": "…",
   "assigned_unit": "<unit id>",
@@ -285,9 +290,11 @@ Not related to pins.
 | GET | `/timeDiff/my` | login | `?page&limit` | my history, [paged](#paging), newest first |
 | GET | `/timeDiff/allUnit` | login | `?page&limit` | my unit's history, [paged](#paging), newest first |
 | GET | `/timeDiff/:id` | owner/unit/admin | – | time diff |
-| POST | `/timeDiff` | login | `{ real_time, dvr_time, dvr_lastSave? }` | 201 `{ message, timeDiff }` |
+| POST | `/timeDiff` | login | `{ name, real_time, dvr_time, dvr_lastSave? }` | 201 `{ message, timeDiff }` |
 | DELETE | `/timeDiff/:id` | owner/admin | – | `{ message, id }` |
 
+- `name` (string, 1–100, required) says what was checked, e.g. a camera or a place. It is the record's title in the history,
+  so others in the unit understand it. Records saved before the field existed have no `name`.
 - Times must be ISO 8601 with `Z` or an offset — just send `date.toISOString()`. A plain date (`2026-10-21`) is also fine.
   `null`, numbers, `true`, and times without a timezone (`2026-10-21T10:00:00`) are rejected with 400.
 - The owner can always read their own records, even after moving to another unit.
@@ -298,7 +305,7 @@ Time diff object:
 
 ```json
 {
-  "_id": "…", "owner": "<user id>", "assigned_unit": "<unit id>",
+  "_id": "…", "name": "מצלמה כניסה ראשית", "owner": "<user id>", "assigned_unit": "<unit id>",
   "real_time": "2026-10-22T10:00:00.000Z", "dvr_time": "2026-10-22T09:58:30.000Z",
   "offset_ms": -90000, "dvr_lastSave": "…",
   "createdAt": "…", "updatedAt": "…"

@@ -18,7 +18,9 @@ function HistoryItem({item, canDelete, onDelete, mine}) {
         <li className="row-card">
             <div className="history-icon" aria-hidden="true"><CalendarClock size={22} /></div>
             <div className="row-main">
-                <span className="row-title">
+                {/* records saved before names existed have none */}
+                <span className="row-title">{item.name || 'ללא שם'}</span>
+                <span className="history-offset">
                     {directionText(parts.direction)}
                     {parts.direction !== 'synced' && <> <span className="nums">{formatClock(parts)}</span></>}
                     {parts.days > 0 && <> ועוד {daysText(parts.days)}</>}

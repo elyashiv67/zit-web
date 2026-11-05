@@ -23,6 +23,13 @@ describe('history', () => {
         expect(rows[1]).toHaveTextContent('ה-DVR מאחר ב- 01:00:00 ועוד יום אחד');
     });
 
+    it('the name is the title of each row; old records without one say so', async () => {
+        renderApp('/history', {user, api: {'GET /timeDiff/my': page([diff('a', {name: 'מצלמה כניסה'}), diff('b')])}});
+        const rows = await screen.findAllByRole('listitem');
+        expect(rows[0].querySelector('.row-title')).toHaveTextContent('מצלמה כניסה');
+        expect(rows[1].querySelector('.row-title')).toHaveTextContent('ללא שם');
+    });
+
     it('asks the server for pages of 20 and loads more on demand', async () => {
         const {server} = renderApp('/history', {user, api: {
             'GET /timeDiff/my': req => (req.query.page === '1' ? page([diff('a')], 1, 2, 2) : page([diff('b')], 2, 2, 2)),

@@ -1,10 +1,11 @@
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {Link} from 'react-router';
 import {CalendarClock, Clock, LoaderCircle, LogIn, Save, TimerReset} from 'lucide-react';
 import {api} from '../api/client.js';
 import {useAuth} from '../auth/AuthContext.jsx';
+import {Field} from '../components/Field.jsx';
 import {useToast} from '../components/Toast.jsx';
-import {useSessionDate} from '../hooks/useSessionDate.js';
+import {useSessionDate, useSessionText} from '../hooks/useSessionDate.js';
 import {
     daysSince, daysText, directionText, dvrTimeFor, formatClock, formatDateTime,
     fromLocalInput, offsetParts, realTimeFor, toLocalInput,
@@ -56,6 +57,10 @@ export default function TimeDiffPage() {
     const [dvrTime, setDvrTime] = useSessionDate('zit.dvrTime');
     const [realTime, setRealTime] = useSessionDate('zit.realTime');
     const [lastSave, setLastSave] = useSessionDate('zit.lastSave');
+    // the history title, so others in the unit know what was checked. Required to save
+    const [name, setName] = useSessionText('zit.diffName');
+    const [nameError, setNameError] = useState('');
+    const nameRef = useRef(null);
     // the event calculator: the user types in one box and the other one is computed from it
     const [event, setEvent] = useState({source: null, time: null});
     const [saving, setSaving] = useState(false);
@@ -66,11 +71,17 @@ export default function TimeDiffPage() {
     const sinceSave = lastSave ? daysSince(lastSave) : null;
 
     const save = async () => {
+        if (!name.trim()) {
+            setNameError('צריך לתת שם לפני השמירה, כדי שכולם יבינו מה נבדק');
+            nameRef.current?.focus();
+            return;
+        }
         setSaving(true);
         try {
             await api('/timeDiff', {
                 method: 'POST',
                 body: {
+                    name: name.trim(),
                     real_time: realTime.toISOString(),
                     dvr_time: dvrTime.toISOString(),
                     ...(lastSave && {dvr_lastSave: toLocalInput(lastSave, false)}),
@@ -88,6 +99,9 @@ export default function TimeDiffPage() {
         <div className="page time-page">
             <section className="section" aria-labelledby="diff-title">
                 <h1 id="diff-title" className="section-title time-title">הפרש זמנים</h1>
+                <Field label="שם (מצלמה / מקום)" ref={nameRef} value={name} maxLength={100}
+                    placeholder="למשל: מצלמה כניסה ראשית" hint="יופיע ככותרת בהיסטוריה. חובה לשמירה" error={nameError}
+                    onChange={e => { setName(e.target.value); setNameError(''); }} />
                 <DateTimeInput label="זמן DVR" value={dvrTime} onChange={setDvrTime} />
                 <DateTimeInput label="זמן אמת" value={realTime} onChange={setRealTime} />
                 <button type="button" className="btn btn-primary" onClick={() => setRealTime(new Date())}>

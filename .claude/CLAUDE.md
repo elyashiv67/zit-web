@@ -28,7 +28,10 @@ read it before working, and update the "Status" and "Next" sections when somethi
 - Paged lists: `GET /user`, `/timeDiff`, `/timeDiff/my`, `/timeDiff/allUnit` take `?page=&limit=` (default 20, max 100)
   and return `{items, page, limit, total, pages}`. Units, roles and pins are plain arrays.
 - Last-admin protection: re-checked after the change, and undone if no admin is left.
-- `npm run dev` (port 4586), `npm test` (234 end-to-end checks on `zit_test`).
+- Time diffs have a required `name` on save (the history title); older records have none ("ללא שם" in the UI).
+- Pins have an optional `dvr_owner` `{name, id_number?, phone?, notes?}`: name required when set; on PATCH it is
+  replaced as a whole and `null` removes it. It is in the lists too (only the DVR password is hidden there).
+- `npm run dev` (port 4586), `npm test` (254 end-to-end checks on `zit_test`).
   `node tests/run.mjs "<command>"` runs another suite against the seeded test server.
 
 ## Frontend (built on design option A)
@@ -50,13 +53,15 @@ read it before working, and update the "Status" and "Next" sections when somethi
   Icons come from lucide-react.
 - Run: server `npm run dev`, then in `react/` run `npm run dev` → http://localhost:5173/zit-web/ (Vite proxies `/api` to 4586).
   Phone on the same Wi-Fi: `npm run dev -- --host`.
-- Tests in `react/`: `npm test` (108 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`)
+- Tests in `react/`: `npm test` (121 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`)
   and `npm run test:contract` (12 tests against a real server on `zit_test`). Lint: `npx eslint .`.
 
-## Status (last updated 2026-11-04)
+## Status (last updated 2026-11-05)
 
 - Server: merged to main (PR #13, paging). Branch `start-front` holds the frontend work. **Commit it before switching machines.**
-- Frontend: all pages built. 108/108 UI tests, 12/12 contract tests, lint clean, build OK.
+- Frontend: all pages built. 121/121 UI tests, 12/12 contract tests, lint clean, build OK.
+- 2026-11-05 (owner's phone review): name on time diffs (required to save, history title), bigger offset readout,
+  DVR owner on pins (form, detail card with tap-to-call, search by owner), bigger map on the pins list.
   Unused MUI / emotion / react-router-dom packages were removed.
 - Known flake: the server suite sometimes fails 1–4 `/health` checks right after request bursts. It is the Atlas connection
   dropping; the code is unchanged since 868d5cb, which passed 234/234. Confirm against local Docker Mongo.

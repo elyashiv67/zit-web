@@ -31,13 +31,23 @@ describe('pins list', () => {
     it('search filters the list and the map', async () => {
         renderApp('/pins', {user, api: {'GET /pin/allUnit': [makePin({_id: 'a', name: 'שער ראשי'}), makePin({_id: 'b', name: 'חניון'})]}});
         await screen.findByText('שער ראשי');
-        await userEvent.type(screen.getByPlaceholderText('חיפוש לפי שם'), 'חני');
+        await userEvent.type(screen.getByPlaceholderText('חיפוש לפי שם נקודה או בעלים'), 'חני');
         expect(screen.queryByText('שער ראשי')).not.toBeInTheDocument();
         expect(screen.getByText('חניון')).toBeInTheDocument();
         expect(screen.getByTestId('map')).toHaveAttribute('data-pins', '1');
-        await userEvent.clear(screen.getByPlaceholderText('חיפוש לפי שם'));
-        await userEvent.type(screen.getByPlaceholderText('חיפוש לפי שם'), 'zzz');
+        await userEvent.clear(screen.getByPlaceholderText('חיפוש לפי שם נקודה או בעלים'));
+        await userEvent.type(screen.getByPlaceholderText('חיפוש לפי שם נקודה או בעלים'), 'zzz');
         expect(screen.getByText('לא נמצאה נקודה בשם הזה')).toBeInTheDocument();
+    });
+
+    it('search also finds a pin by its DVR owner', async () => {
+        renderApp('/pins', {user, api: {'GET /pin/allUnit': [
+            makePin({_id: 'a', name: 'שער ראשי'}), makePin({_id: 'b', name: 'חניון', dvr_owner: {name: 'משה כהן'}}),
+        ]}});
+        await screen.findByText('שער ראשי');
+        await userEvent.type(screen.getByPlaceholderText('חיפוש לפי שם נקודה או בעלים'), 'משה');
+        expect(screen.queryByText('שער ראשי')).not.toBeInTheDocument();
+        expect(screen.getByText('חניון')).toBeInTheDocument();
     });
 
     it('empty unit: an icon and a button to add the first pin', async () => {
@@ -117,6 +127,26 @@ describe('pin details', () => {
         await findHeading('שער ראשי');
         expect(screen.getByText('אין עדיין תמונות')).toBeInTheDocument();
         expect(screen.getByText('אין פרטי DVR לנקודה הזאת.')).toBeInTheDocument();
+        expect(screen.getByText('לא נשמר בעל DVR לנקודה הזאת.')).toBeInTheDocument();
+    });
+
+    it('shows the DVR owner, with a call button for the phone', async () => {
+        renderApp('/pins/pin1', {user, api: {'GET /pin/pin1': makePin({
+            dvr_owner: {name: 'משה כהן', id_number: '123456789', phone: '0521234567', notes: 'זמין רק בבוקר'},
+        })}});
+        const section = (await screen.findByRole('heading', {name: 'בעל ה-DVR'})).closest('section');
+        expect(section).toHaveTextContent('משה כהן');
+        expect(section).toHaveTextContent('123456789');
+        expect(section).toHaveTextContent('זמין רק בבוקר');
+        expect(screen.getByRole('link', {name: 'התקשרות אל משה כהן'})).toHaveAttribute('href', 'tel:0521234567');
+    });
+
+    it('an owner with only a name shows just the name', async () => {
+        renderApp('/pins/pin1', {user, api: {'GET /pin/pin1': makePin({dvr_owner: {name: 'רינה'}})}});
+        const section = (await screen.findByRole('heading', {name: 'בעל ה-DVR'})).closest('section');
+        expect(section).toHaveTextContent('רינה');
+        expect(section).not.toHaveTextContent('טלפון');
+        expect(screen.queryByRole('link', {name: /התקשרות/})).not.toBeInTheDocument();
     });
 
     it('uploads photos as multipart "images", showing a placeholder tile meanwhile', async () => {
@@ -263,6 +293,68 @@ describe('pin form', () => {
         expect(server.callsTo('PATCH', '/pin/pin1')[0].body).toEqual({
             name: 'שער ראשי', location: {lat: 32.6, lng: 35.29}, dvr: {password: null},
         });
+    });
+
+    it('creates a pin with a DVR owner: only the filled fields, phone / ID as digits', async () => {
+        const created = makePin({_id: 'new1'});
+        const {server} = renderApp('/pins/new', {user, api: {'POST /pin': {status: 201, body: {pin: created}}, 'GET /pin/new1': created}});
+        await findHeading('נקודה חדשה');
+        await userEvent.type(screen.getByLabelText('שם הנקודה'), 'מכולת');
+        await userEvent.click(await screen.findByRole('button', {name: 'pick on map'}));
+        await userEvent.type(screen.getByLabelText('שם הבעלים'), ' משה כהן ');
+        await userEvent.type(screen.getByLabelText('טלפון (לא חובה)'), '052-123 4567');
+        await userEvent.type(screen.getByLabelText('הערות (לא חובה)'), 'זמין בבוקר');
+        await userEvent.click(screen.getByRole('button', {name: /הוספת הנקודה/}));
+        await screen.findByText('הנקודה נוספה');
+        expect(server.callsTo('POST', '/pin')[0].body).toEqual({
+            name: 'מכולת', location: {lat: 32.5, lng: 35.1},
+            dvr_owner: {name: 'משה כהן', phone: '0521234567', notes: 'זמין בבוקר'},
+        });
+    });
+
+    it('owner details without a name are stopped before sending', async () => {
+        const {server} = renderApp('/pins/new', {user});
+        await findHeading('נקודה חדשה');
+        await userEvent.type(screen.getByLabelText('שם הנקודה'), 'מכולת');
+        await userEvent.click(await screen.findByRole('button', {name: 'pick on map'}));
+        await userEvent.type(screen.getByLabelText('טלפון (לא חובה)'), '0521234567');
+        await userEvent.type(screen.getByLabelText('ת״ז (לא חובה)'), '12a');
+        await userEvent.click(screen.getByRole('button', {name: /הוספת הנקודה/}));
+        expect(screen.getByLabelText('שם הבעלים')).toHaveAccessibleDescription('צריך למלא את שם הבעלים');
+        expect(screen.getByLabelText('ת״ז (לא חובה)')).toHaveAccessibleDescription('עד 9 ספרות');
+        expect(server.callsTo('POST', '/pin')).toHaveLength(0);
+    });
+
+    it('edit: a changed owner is sent whole, an emptied owner is removed (null)', async () => {
+        const pin = makePin({dvr_owner: {name: 'משה כהן', phone: '0521234567', notes: 'בבוקר'}});
+        const {server} = renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': pin, 'PATCH /pin/pin1': {pin}}});
+        await findHeading('עריכת נקודה');
+        expect(screen.getByLabelText('שם הבעלים')).toHaveValue('משה כהן');
+        await userEvent.clear(screen.getByLabelText('הערות (לא חובה)'));
+        await userEvent.click(screen.getByRole('button', {name: /שמירת השינויים/}));
+        await screen.findByText('הנקודה עודכנה');
+        expect(server.callsTo('PATCH', '/pin/pin1')[0].body.dvr_owner).toEqual({name: 'משה כהן', phone: '0521234567'});
+    });
+
+    it('edit: clearing every owner field removes the owner', async () => {
+        const pin = makePin({dvr_owner: {name: 'משה כהן', phone: '0521234567'}});
+        const {server} = renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': pin, 'PATCH /pin/pin1': {pin}}});
+        await findHeading('עריכת נקודה');
+        await userEvent.clear(screen.getByLabelText('שם הבעלים'));
+        await userEvent.clear(screen.getByLabelText('טלפון (לא חובה)'));
+        await userEvent.click(screen.getByRole('button', {name: /שמירת השינויים/}));
+        await screen.findByText('הנקודה עודכנה');
+        expect(server.callsTo('PATCH', '/pin/pin1')[0].body.dvr_owner).toBeNull();
+    });
+
+    it('edit: an untouched owner is not sent', async () => {
+        const pin = makePin({dvr_owner: {name: 'משה כהן'}});
+        const {server} = renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': pin, 'PATCH /pin/pin1': {pin}}});
+        await findHeading('עריכת נקודה');
+        await userEvent.type(screen.getByLabelText('שם הנקודה'), '2');
+        await userEvent.click(screen.getByRole('button', {name: /שמירת השינויים/}));
+        await screen.findByText('הנקודה עודכנה');
+        expect(server.callsTo('PATCH', '/pin/pin1')[0].body).not.toHaveProperty('dvr_owner');
     });
 
     it('a server error stays on the form with the message', async () => {

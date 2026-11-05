@@ -3,6 +3,11 @@ import mongoose from "mongoose";
 const ObjectId = mongoose.Schema.Types.ObjectId;
 
 const TimeDiffSchema = new mongoose.Schema({
+    // what was checked (e.g. a camera or a place), the title in the history.
+    // Required on save (TimeDiff_S.js); records saved before it existed have none
+    name: {
+        type: String
+    },
     owner: {
         type: ObjectId,
         ref: 'User',

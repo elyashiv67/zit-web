@@ -9,16 +9,33 @@ import LazyPinMap from '../components/LazyPinMap.jsx';
 import PageSkeleton from '../components/PageSkeleton.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import {MAX_IMAGES_PER_PIN, uploadPinImages} from '../lib/pinImages.js';
-import {validatePin} from '../lib/validation.js';
+import {onlyDigits, validatePin} from '../lib/validation.js';
 
 function toForm(pin) {
+    const owner = pin?.dvr_owner;
     return {
         name: pin?.name ?? '',
         lat: pin ? String(pin.location.lat) : '',
         lng: pin ? String(pin.location.lng) : '',
         dvrUser: pin?.dvr?.user_name ?? '',
         dvrPass: pin?.dvr?.password ?? '',
+        ownerName: owner?.name ?? '',
+        ownerId: owner?.id_number ?? '',
+        ownerPhone: owner?.phone ?? '',
+        ownerNotes: owner?.notes ?? '',
     };
+}
+
+// the dvr_owner body: only the filled fields, or null when there is no owner (validatePin made sure a name exists)
+function ownerFrom(form) {
+    const owner = {
+        name: form.ownerName.trim(),
+        id_number: onlyDigits(form.ownerId),
+        phone: onlyDigits(form.ownerPhone),
+        notes: form.ownerNotes.trim(),
+    };
+    if (!owner.name) return null;
+    return Object.fromEntries(Object.entries(owner).filter(([, value]) => value));
 }
 
 function PinForm({pin}) {
@@ -69,8 +86,15 @@ function PinForm({pin}) {
             if (form.dvrUser !== (pin.dvr?.user_name ?? '')) dvr.user_name = form.dvrUser || null;
             if (form.dvrPass !== (pin.dvr?.password ?? '')) dvr.password = form.dvrPass || null;
             if (Object.keys(dvr).length) body.dvr = dvr;
-        } else if (form.dvrUser || form.dvrPass) {
-            body.dvr = {...(form.dvrUser && {user_name: form.dvrUser}), ...(form.dvrPass && {password: form.dvrPass})};
+            // the server replaces the owner as a whole, so send it only when something changed (null removes it)
+            const owner = ownerFrom(form);
+            if (JSON.stringify(owner) !== JSON.stringify(ownerFrom(toForm(pin)))) body.dvr_owner = owner;
+        } else {
+            if (form.dvrUser || form.dvrPass) {
+                body.dvr = {...(form.dvrUser && {user_name: form.dvrUser}), ...(form.dvrPass && {password: form.dvrPass})};
+            }
+            const owner = ownerFrom(form);
+            if (owner) body.dvr_owner = owner;
         }
 
         setBusy(true);
@@ -125,6 +149,20 @@ function PinForm({pin}) {
                     <Field label="שם משתמש" value={form.dvrUser} onChange={set('dvrUser')} error={errors.dvrUser}
                         autoComplete="off" autoCapitalize="none" dir="ltr" />
                     <PasswordField label="סיסמה" value={form.dvrPass} onChange={set('dvrPass')} error={errors.dvrPass} autoComplete="new-password" />
+                </section>
+
+                <section className="section" aria-labelledby="owner-title">
+                    <h2 id="owner-title" className="section-title">בעל ה-DVR</h2>
+                    <p className="section-text">לא חובה. אם ממלאים, צריך לפחות שם.</p>
+                    <Field label="שם הבעלים" value={form.ownerName} onChange={set('ownerName')} error={errors.ownerName} maxLength={100} autoComplete="off" />
+                    <div className="form-row">
+                        <Field label="ת״ז (לא חובה)" value={form.ownerId} onChange={set('ownerId')} error={errors.ownerId}
+                            inputMode="numeric" autoComplete="off" dir="ltr" />
+                        <Field label="טלפון (לא חובה)" type="tel" value={form.ownerPhone} onChange={set('ownerPhone')} error={errors.ownerPhone}
+                            inputMode="tel" autoComplete="off" dir="ltr" />
+                    </div>
+                    <Field label="הערות (לא חובה)" multiline rows={3} value={form.ownerNotes} onChange={set('ownerNotes')}
+                        error={errors.ownerNotes} maxLength={500} placeholder="למשל: זמין רק בבוקר, לפנות דרך המשמרת" />
                 </section>
 
                 {!editing && (

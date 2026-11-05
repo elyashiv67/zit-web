@@ -180,6 +180,7 @@ button, input, select { font: inherit; color: inherit; }
 .input:focus-visible { outline: 2px solid var(--red); outline-offset: 0; box-shadow: none; border-color: var(--red); }
 .input-invalid { border-color: var(--red); border-width: 2px; }
 
+textarea.input { min-height: 96px; padding-block: 12px; resize: vertical; line-height: 1.5; }
 select.input { appearance: none; padding-inline-end: 36px; cursor: pointer; }
 select.input option { background: var(--surface); }
 
@@ -234,6 +235,7 @@ a.row-card:hover { background: #46575e; }
 .row-title { font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-meta { font-size: 14px; opacity: 0.85; display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .row-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.history-offset { font-size: 17px; font-weight: 800; }
 
 .list { display: flex; flex-direction: column; gap: 10px; }
 .plain-list { list-style: none; margin: 0; padding: 0; }

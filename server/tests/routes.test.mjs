@@ -254,6 +254,25 @@ await t('dvr password kept after partial update', u1, 'GET', `/pin/${ids.pin}`, 
 await t('dvr password cleared with null', u1, 'PATCH', `/pin/${ids.pin}`, {dvr: {password: null}}, 200);
 await t('password gone, user_name kept', u1, 'GET', `/pin/${ids.pin}`, undefined, 200, d => must(!('password' in d.dvr) && d.dvr.user_name === 'dvr2', JSON.stringify(d.dvr)));
 await t('dvr password set again', u1, 'PATCH', `/pin/${ids.pin}`, {dvr: {password: 'dvrpass'}}, 200);
+// the DVR owner: name required, id / phone / notes optional; replaced as a whole on PATCH
+await t('pin has no dvr owner yet', u1, 'GET', `/pin/${ids.pin}`, undefined, 200, d => must(!('dvr_owner' in d), JSON.stringify(d.dvr_owner)));
+await t('set dvr owner (full)', u1, 'PATCH', `/pin/${ids.pin}`, {dvr_owner: {name: ' משה כהן ', id_number: '123456789', phone: '0521234567', notes: 'בעל החנות, זמין בבוקר'}}, 200,
+    d => must(d.pin?.dvr_owner?.name === 'משה כהן' && d.pin.dvr_owner.id_number === '123456789' && d.pin.dvr_owner.notes === 'בעל החנות, זמין בבוקר', JSON.stringify(d.pin?.dvr_owner)));
+await t('dvr owner shows in the unit list', u1, 'GET', '/pin/allUnit', undefined, 200, d => must(d[0].dvr_owner?.phone === '0521234567', 'missing in list'));
+await t('dvr owner replaced as a whole (name only)', u1, 'PATCH', `/pin/${ids.pin}`, {dvr_owner: {name: 'דוד לוי'}}, 200,
+    d => must(JSON.stringify(d.pin?.dvr_owner) === JSON.stringify({name: 'דוד לוי'}), JSON.stringify(d.pin?.dvr_owner)));
+await t('dvr password untouched by owner edits', u1, 'GET', `/pin/${ids.pin}`, undefined, 200, d => must(d.dvr.password === 'dvrpass', 'password lost'));
+for (const [label, owner] of [
+    ['without a name', {phone: '0521234567'}], ['blank name', {name: '  '}], ['id with letters', {name: 'x', id_number: '12a'}],
+    ['id too long', {name: 'x', id_number: '1234567890'}], ['phone with dashes', {name: 'x', phone: '052-1234567'}],
+    ['notes too long', {name: 'x', notes: 'n'.repeat(501)}], ['empty notes', {name: 'x', notes: ''}],
+])
+    await t(`dvr owner ${label} -> 400`, u1, 'PATCH', `/pin/${ids.pin}`, {dvr_owner: owner}, 400);
+await t('dvr owner removed with null', u1, 'PATCH', `/pin/${ids.pin}`, {dvr_owner: null}, 200, d => must(!('dvr_owner' in d.pin), JSON.stringify(d.pin.dvr_owner)));
+r = await t('add pin with dvr owner', u1, 'POST', '/pin', {name: `__test pin owner ${R}`, location: {lat: 32.61, lng: 35.31}, dvr_owner: {name: 'רינה', phone: '046000000'}}, 201,
+    d => must(d.pin?.dvr_owner?.name === 'רינה' && d.pin.dvr_owner.phone === '046000000' && !('id_number' in d.pin.dvr_owner), JSON.stringify(d.pin?.dvr_owner)));
+await t('add pin owner without name -> 400', u1, 'POST', '/pin', {name: 'x', location: {lat: 1, lng: 1}, dvr_owner: {notes: 'n'}}, 400);
+await t('remove the owner test pin', u1, 'DELETE', `/pin/${r.data.pin?._id}`, undefined, 200);
 await t('patch pin other user -> 403', u2, 'PATCH', `/pin/${ids.pin}`, {name: 'x'}, 403);
 await t('patch pin empty -> 400', u1, 'PATCH', `/pin/${ids.pin}`, {}, 400);
 await t('admin patches pin', admin, 'PATCH', `/pin/${ids.pin}`, {name: `__test pin2 ${R}`}, 200);
@@ -271,19 +290,21 @@ r = await t('user2 adds pin in unit B', u2, 'POST', '/pin', {name: `__test pinB 
 ids.pinB = r.data.pin?._id;
 
 console.log('\n== time diff');
-await t('save w/o login -> 401', anon, 'POST', '/timeDiff', {real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T09:58:30Z'}, 401);
-r = await t('user1 saves diff', u1, 'POST', '/timeDiff', {real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T09:58:30Z', pin: ids.pin}, 201,
-    d => must(d.timeDiff?.offset_ms === -90000 && d.timeDiff.owner === ids.u1 && !('pin' in d.timeDiff), `bad record ${JSON.stringify(d.timeDiff)}`));
+await t('save w/o login -> 401', anon, 'POST', '/timeDiff', {name: 'cam 1', real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T09:58:30Z'}, 401);
+r = await t('user1 saves diff', u1, 'POST', '/timeDiff', {name: '  מצלמה כניסה  ', real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T09:58:30Z', pin: ids.pin}, 201,
+    d => must(d.timeDiff?.offset_ms === -90000 && d.timeDiff.owner === ids.u1 && d.timeDiff.name === 'מצלמה כניסה' && !('pin' in d.timeDiff), `bad record ${JSON.stringify(d.timeDiff)}`));
 ids.td1 = r.data.timeDiff?._id;
-r = await t('user1 saves diff w/ lastSave', u1, 'POST', '/timeDiff', {real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-22T10:00:00Z', dvr_lastSave: '2026-10-01'}, 201,
+r = await t('user1 saves diff w/ lastSave', u1, 'POST', '/timeDiff', {name: 'cam 1', real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-22T10:00:00Z', dvr_lastSave: '2026-10-01'}, 201,
     d => must(d.timeDiff?.offset_ms === 86400000 && d.timeDiff.dvr_lastSave, 'bad record'));
 ids.td2 = r.data.timeDiff?._id;
-r = await t('user2 saves diff', u2, 'POST', '/timeDiff', {real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T10:00:05Z'}, 201);
+r = await t('user2 saves diff', u2, 'POST', '/timeDiff', {name: 'cam 1', real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T10:00:05Z'}, 201);
 ids.td3 = r.data.timeDiff?._id;
-await t('save bad dates -> 400', u1, 'POST', '/timeDiff', {real_time: 'nope', dvr_time: 'x'}, 400);
+for (const [label, name] of [['missing', undefined], ['blank', '   '], ['too long', 'x'.repeat(101)], ['a number', 5]])
+    await t(`save with name ${label} -> 400`, u1, 'POST', '/timeDiff', {name, real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T10:00:00Z'}, 400);
+await t('save bad dates -> 400', u1, 'POST', '/timeDiff', {name: 'cam 1', real_time: 'nope', dvr_time: 'x'}, 400);
 for (const bad of [null, true, 0, 1700000000000, '2026-10-21T10:00:00', '2026-13-40'])
-    await t(`save real_time ${JSON.stringify(bad)} -> 400`, u1, 'POST', '/timeDiff', {real_time: bad, dvr_time: '2026-10-21T10:00:00Z'}, 400);
-r = await t('date with +03:00 offset is converted', u1, 'POST', '/timeDiff', {real_time: '2026-10-21T13:00:00+03:00', dvr_time: '2026-10-21T10:00:00Z'}, 201,
+    await t(`save real_time ${JSON.stringify(bad)} -> 400`, u1, 'POST', '/timeDiff', {name: 'cam 1', real_time: bad, dvr_time: '2026-10-21T10:00:00Z'}, 400);
+r = await t('date with +03:00 offset is converted', u1, 'POST', '/timeDiff', {name: 'cam 1', real_time: '2026-10-21T13:00:00+03:00', dvr_time: '2026-10-21T10:00:00Z'}, 201,
     d => must(d.timeDiff.offset_ms === 0, `offset ${d.timeDiff.offset_ms}`));
 await t('remove it', u1, 'DELETE', `/timeDiff/${r.data.timeDiff?._id}`, undefined, 200);
 await t('my history (newest first)', u1, 'GET', '/timeDiff/my', undefined, 200, d => must(d.items.length === 2 && d.total === 2 && d.items[0]._id === ids.td2, 'wrong order/count'));

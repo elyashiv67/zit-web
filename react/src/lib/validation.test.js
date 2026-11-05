@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
-import {validatePasswordChange, validatePin, validateUnit, validateUser} from './validation.js';
+import {onlyDigits, validatePasswordChange, validatePin, validateUnit, validateUser} from './validation.js';
 
-const pin = (o = {}) => ({name: 'שער', lat: '32.6', lng: '35.29', dvrUser: '', dvrPass: '', ...o});
+const pin = (o = {}) => ({name: 'שער', lat: '32.6', lng: '35.29', dvrUser: '', dvrPass: '', ownerName: '', ownerId: '', ownerPhone: '', ownerNotes: '', ...o});
 
 describe('validatePin', () => {
     it('accepts a good pin', () => expect(validatePin(pin())).toEqual({}));
@@ -17,6 +17,19 @@ describe('validatePin', () => {
     });
     it('limits DVR fields', () => {
         expect(validatePin(pin({dvrPass: 'p'.repeat(101)})).dvrPass).toBeTruthy();
+    });
+    it('DVR owner: optional, but any detail needs a name', () => {
+        expect(validatePin(pin({ownerName: 'משה', ownerId: '123456789', ownerPhone: '052-123 4567', ownerNotes: 'בבוקר'}))).toEqual({});
+        expect(validatePin(pin({ownerPhone: '0521234567'})).ownerName).toBe('צריך למלא את שם הבעלים');
+        expect(validatePin(pin({ownerNotes: 'רק הערה'})).ownerName).toBeTruthy();
+        expect(validatePin(pin({ownerName: 'x'.repeat(101)})).ownerName).toBeTruthy();
+    });
+    it('DVR owner ID / phone are digits (spaces and dashes allowed), notes up to 500', () => {
+        expect(validatePin(pin({ownerName: 'משה', ownerId: '12a'})).ownerId).toBeTruthy();
+        expect(validatePin(pin({ownerName: 'משה', ownerId: '1234567890'})).ownerId).toBeTruthy();
+        expect(validatePin(pin({ownerName: 'משה', ownerPhone: '05212345678'})).ownerPhone).toBeTruthy();
+        expect(validatePin(pin({ownerName: 'משה', ownerNotes: 'n'.repeat(501)})).ownerNotes).toBeTruthy();
+        expect(onlyDigits('052-123 4567')).toBe('0521234567');
     });
 });
 

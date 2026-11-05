@@ -2,13 +2,15 @@ import {useId, useState} from 'react';
 import {Eye, EyeOff} from 'lucide-react';
 
 // label + input + error, wired for screen readers. Extra props go to the <input>
-export function Field({label, error, hint, className = '', ...inputProps}) {
+// (a <textarea> with `multiline`)
+export function Field({label, error, hint, className = '', multiline = false, ...inputProps}) {
     const id = useId();
     const errorId = `${id}-error`;
+    const Input = multiline ? 'textarea' : 'input';
     return (
         <div className={`field ${className}`}>
             <label htmlFor={id} className="field-label">{label}</label>
-            <input
+            <Input
                 id={id}
                 className={`input ${error ? 'input-invalid' : ''}`}
                 aria-invalid={error ? 'true' : undefined}

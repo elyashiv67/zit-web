@@ -24,3 +24,26 @@ export function useSessionDate(key) {
 
     return [value, set];
 }
+
+// the same for a plain string (the name of what is being checked)
+export function useSessionText(key) {
+    const [value, setValue] = useState(() => {
+        try {
+            return sessionStorage.getItem(key) ?? '';
+        } catch {
+            return '';
+        }
+    });
+
+    const set = useCallback(text => {
+        setValue(text);
+        try {
+            if (text) sessionStorage.setItem(key, text);
+            else sessionStorage.removeItem(key);
+        } catch {
+            // private mode / storage blocked: the value still works for this visit
+        }
+    }, [key]);
+
+    return [value, set];
+}

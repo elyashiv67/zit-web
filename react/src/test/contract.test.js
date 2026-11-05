@@ -103,6 +103,13 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
         expect(full.dvr).toEqual({user_name: 'dvr', password: 'pw1'});
         await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {name: 'נקודת חוזה', location: {lat: 32.6, lng: 35.29}, dvr: {password: null}}});
         expect((await api(`/pin/${ids.pin}`)).dvr).toEqual({user_name: 'dvr'});
+        // the DVR owner, as the form sends it: whole on change, null to remove
+        await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {dvr_owner: {name: 'משה כהן', phone: '0521234567', notes: 'בבוקר'}}});
+        expect((await api(`/pin/${ids.pin}`)).dvr_owner).toEqual({name: 'משה כהן', phone: '0521234567', notes: 'בבוקר'});
+        await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {dvr_owner: {name: 'משה כהן'}}});
+        expect((await api(`/pin/${ids.pin}`)).dvr_owner).toEqual({name: 'משה כהן'});
+        await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {dvr_owner: null}});
+        expect(await api(`/pin/${ids.pin}`)).not.toHaveProperty('dvr_owner');
         const list = await api('/pin/allUnit');
         expect(list.find(p => p._id === ids.pin)).toBeTruthy();
     });
@@ -123,12 +130,13 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
         const dvr = new Date('2026-11-04T10:03:25');
         const {timeDiff} = await api('/timeDiff', {
             method: 'POST',
-            body: {real_time: real.toISOString(), dvr_time: dvr.toISOString(), dvr_lastSave: toLocalInput(new Date('2026-10-30T00:00:00'), false)},
+            body: {name: 'מצלמת חוזה', real_time: real.toISOString(), dvr_time: dvr.toISOString(), dvr_lastSave: toLocalInput(new Date('2026-10-30T00:00:00'), false)},
         });
         ids.diff = timeDiff._id;
         expect(timeDiff.offset_ms).toBe(offsetParts(real, dvr).ms);
         const page = await api('/timeDiff/my?page=1&limit=20');
         const saved = page.items.find(d => d._id === ids.diff);
+        expect(saved.name).toBe('מצלמת חוזה');
         expect(partsFromMs(saved.offset_ms)).toMatchObject({direction: 'ahead', minutes: 3, seconds: 25});
         expect((await api('/timeDiff/allUnit?page=1&limit=20')).items.some(d => d._id === ids.diff)).toBe(true);
         await api(`/timeDiff/${ids.diff}`, {method: 'DELETE'});

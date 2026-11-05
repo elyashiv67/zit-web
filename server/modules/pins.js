@@ -45,6 +45,21 @@ const PinSchema = new mongoose.Schema({
             get: decrypt
         }
     },
+    // who owns the DVR, so the unit knows whom to call. Only name is required (when an owner is set)
+    dvr_owner: {
+        name: {
+            type: String
+        },
+        id_number: {
+            type: String
+        },
+        phone: {
+            type: String
+        },
+        notes: {
+            type: String
+        }
+    },
     assigned_unit: {
         type: ObjectId,
         ref: 'Unit',

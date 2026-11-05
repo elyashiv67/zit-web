@@ -12,6 +12,9 @@
 }
 .dvr-row dt { font-size: 14px; opacity: 0.9; min-width: 72px; }
 .dvr-row dd { margin: 0; flex: 1; font-size: 17px; font-weight: 700; text-align: start; overflow-wrap: anywhere; }
+/* notes can be a few lines: no row-height icon buttons there, keep the text readable */
+.owner-notes { align-items: flex-start; padding-block: 10px; }
+.owner-notes dd { font-size: 16px; font-weight: 500; white-space: pre-line; line-height: 1.5; }
 
 .gallery {
     list-style: none;
