@@ -11,6 +11,9 @@ vi.mock('../components/PinMap.jsx', () => ({
     ),
 }));
 
+// jsdom has no layout, so scrolling is a no-op (it would only print "not implemented")
+if (globalThis.window) window.scrollTo = () => {};
+
 afterEach(() => {
     cleanup();
     globalThis.sessionStorage?.clear();

@@ -88,6 +88,13 @@ export default function TimeDiffPage() {
                 },
             });
             toast.success('ההפרש נשמר בהיסטוריה');
+            // saved: start fresh for the next camera
+            setName('');
+            setDvrTime(null);
+            setRealTime(null);
+            setLastSave(null);
+            setEvent({source: null, time: null});
+            window.scrollTo({top: 0, behavior: 'smooth'});
         } catch (err) {
             toast.error(err.message);
         } finally {

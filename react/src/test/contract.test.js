@@ -31,7 +31,8 @@ function useCookieJar() {
     return jar;
 }
 
-describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
+// every step is a round trip to the real database (Atlas), so allow more than the default 5s per test
+describe.skipIf(!BASE)('frontend ↔ real server contract', {timeout: 20_000}, () => {
     let api, ApiError, apiUrl, uploadPinImages, jar;
     const ids = {};
 

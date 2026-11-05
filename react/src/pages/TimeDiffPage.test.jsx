@@ -94,6 +94,25 @@ describe('time diff page (public)', () => {
             dvr_time: new Date('2026-11-04T10:03:25').toISOString(),
             dvr_lastSave: '2026-10-30',
         });
+        // the page starts fresh for the next check, also after a refresh
+        expect(screen.getByLabelText('שם (מצלמה / מקום)')).toHaveValue('');
+        expect(screen.getByLabelText('זמן DVR')).toHaveValue('');
+        expect(screen.getByLabelText('זמן אמת')).toHaveValue('');
+        expect(screen.getByLabelText('תאריך השמירה האחרונה')).toHaveValue('');
+        expect(screen.getByText('הזינו את זמן ה-DVR ואת זמן האמת')).toBeInTheDocument();
+        expect(sessionStorage.getItem('zit.diffName')).toBeNull();
+        expect(sessionStorage.getItem('zit.dvrTime')).toBeNull();
+    });
+
+    it('a failed save keeps everything the user typed', async () => {
+        renderApp('/', {user: makeUser(), api: {'POST /timeDiff': {status: 503, body: {message: 'down'}}}});
+        setInput('שם (מצלמה / מקום)', 'מצלמה כניסה');
+        setInput('זמן DVR', '2026-11-04T10:03:25');
+        setInput('זמן אמת', '2026-11-04T10:00:00');
+        await userEvent.click(await screen.findByRole('button', {name: /שמירה להיסטוריה/}));
+        await screen.findByText('השרת לא זמין כרגע. נסו שוב בעוד רגע');
+        expect(screen.getByLabelText('שם (מצלמה / מקום)')).toHaveValue('מצלמה כניסה');
+        expectTime('זמן DVR', '2026-11-04T10:03:25');
     });
 
     it('saving without a name is blocked: the name field says why and gets the focus', async () => {
