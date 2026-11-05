@@ -119,9 +119,12 @@ The `user` object from login / `me`:
   "phone": "…", "email": "…",
   "role": { "_id": "…", "name": "admin", "level": 1 },
   "unit": { "_id": "…", "district": "…", "merhav": "…", "station": "…" },
+  "job_title": { "_id": "…", "name": "ראש צוות" },
   "is_admin": true
 }
 ```
+
+`is_admin` (from the role) is what the app uses to show admin pages; show regular users their `job_title`, not the role.
 
 ### Register body
 
@@ -136,8 +139,10 @@ The `user` object from login / `me`:
 | `email` | valid email, unique |
 | `role` | role `_id` (must exist) |
 | `unit` | unit `_id` (must exist) |
+| `job_title` | job title `_id` (must exist) — see [Job titles](#job-titles--jobtitle) |
 
-Errors: 409 `{ message: "<field> already exists", field, fields }`, 400 `{ message: "role not found", field: "role" }`.
+Errors: 409 `{ message: "<field> already exists", field, fields }`, 400 `{ message: "role not found", field: "role" }`
+(same for `unit` / `job_title`).
 
 ---
 
@@ -145,8 +150,8 @@ Errors: 409 `{ message: "<field> already exists", field, fields }`, 400 `{ messa
 
 | Method | Path | Access | Body | Response |
 |---|---|---|---|---|
-| GET | `/user` | admin | `?page&limit` | [paged](#paging) users by name (`role` / `unit` as ids) |
-| GET | `/user/:id` | self/admin | – | user (with `role` / `unit` populated) |
+| GET | `/user` | admin | `?page&limit` | [paged](#paging) users by name (`role` / `unit` / `job_title` as ids) |
+| GET | `/user/:id` | self/admin | – | user (with `role` / `unit` / `job_title` populated) |
 | PATCH | `/user/:id` | self/admin | see below | `{ message, user }` |
 | PATCH | `/user/:id/password` | self/admin | `{ current_password?, new_password }` | `{ message, id }` |
 | DELETE | `/user/:id` | self/admin | – | `{ message, id }` |
@@ -155,8 +160,8 @@ The password hash is never returned.
 
 **PATCH `/user/:id`** — at least one field:
 - regular user (on themselves): `name`, `phone`, `email`. Anything else is ignored.
-- admin: also `user_name`, `TZ`, `police_id`, `role`, `unit`. (Not `pass` — use the password route.)
-- errors: 409 duplicate value, 400 role/unit not found, 409 `Cannot change the role of the last admin`
+- admin: also `user_name`, `TZ`, `police_id`, `role`, `unit`, `job_title`. (Not `pass` — use the password route.)
+- errors: 409 duplicate value, 400 role/unit/job_title not found (`field`), 409 `Cannot change the role of the last admin`
   (safe even if two admins demote each other at the same moment — one always stays admin).
 
 **PATCH `/user/:id/password`**
@@ -182,6 +187,22 @@ If users delete themselves, their session ends in the same response (cookie clea
 | DELETE | `/role/:id` | admin | – | `{ message, id }` |
 
 `level` and `name` are unique (409). Delete → 409 if any user has the role.
+The role is the **permission** (admin / user). The job title below is separate and gives no permissions.
+
+---
+
+## Job titles — `/jobTitle`
+
+| Method | Path | Access | Body | Response |
+|---|---|---|---|---|
+| GET | `/jobTitle` | login | – | array, by name |
+| POST | `/jobTitle` | admin | `{ name: string 1-50 }` | 201 `{ message, jobTitle }` |
+| PATCH | `/jobTitle/:id` | admin | `{ name }` | `{ message, jobTitle }` |
+| DELETE | `/jobTitle/:id` | admin | – | `{ message, id }` |
+
+- `name` is trimmed and unique (409).
+- Every user has a job title (`job_title`, see Users), so delete → 409 while any user has it.
+- Renaming changes it for everyone who has it.
 
 ---
 
@@ -220,7 +241,8 @@ Body:
   "name": "string 1-100",
   "location": { "lat": -90..90, "lng": -180..180 },
   "dvr": { "user_name": "optional", "password": "optional" },
-  "dvr_owner": { "name": "string 1-100", "id_number": "optional, 1-9 digits", "phone": "optional, 1-10 digits", "notes": "optional, 1-500" }
+  "dvr_owner": { "name": "string 1-100", "id_number": "optional, 1-9 digits", "phone": "optional, 1-10 digits", "notes": "optional, 1-500" },
+  "marker": { "icon": "cctv|video|webcam|camera|eye|store|building|pin", "color": "red|orange|yellow|green|blue|purple|brown|black" }
 }
 ```
 
@@ -229,6 +251,8 @@ Body:
 - `dvr_owner` (who owns the DVR, e.g. the shop owner) is optional; when sent, `name` is required.
   On PATCH it is **replaced as a whole** (a key that isn't sent is removed), and `dvr_owner: null` removes the owner.
   It is returned in the lists too (only the DVR password is hidden there).
+- `marker` (how the pin looks on the map) is optional: one icon and one color from the lists above, both required.
+  On PATCH it is replaced as a whole, and `marker: null` removes it. A pin without one shows as the plain red dot.
 - `dvr.password` is stored **encrypted** (AES-256-GCM, key `DVR_SECRET`) and decrypted only in `GET /pin/:id`.
 - Set by the server, never from the body: `creator` (user id), `creator_name` (kept even if the user is deleted), `assigned_unit`, `image`.
 - `dvr.password` is only returned by `GET /pin/:id`, not in the lists.
@@ -241,6 +265,7 @@ Pin object:
   "location": { "lat": 32.6, "lng": 35.3 },
   "dvr": { "user_name": "…" },
   "dvr_owner": { "name": "…", "id_number": "…", "phone": "…", "notes": "…" },
+  "marker": { "icon": "cctv", "color": "blue" },
   "image": ["<uuid>.jpg"],
   "creator": "<user id>", "creator_name": "…",
   "assigned_unit": "<unit id>",

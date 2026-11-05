@@ -23,6 +23,8 @@ function buildReqUser(user) {
         email: user.email,
         role: user.role,
         unit: user.unit,
+        // {_id, name}; null only for an account made before titles existed and not migrated yet
+        job_title: user.job_title ? {_id: user.job_title.id, name: user.job_title.name} : null,
         is_admin: user.role.name === 'admin',
     };
 }

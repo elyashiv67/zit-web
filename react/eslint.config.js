@@ -27,6 +27,11 @@ export default defineConfig([
     },
   },
   {
+    // the Vite config runs in Node
+    files: ['vite.config.js'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     // tests run in Node (vitest) and are never hot-reloaded
     files: ['src/test/**', '**/*.test.{js,jsx}'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },

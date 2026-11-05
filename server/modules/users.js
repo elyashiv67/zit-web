@@ -49,6 +49,12 @@ const UserSchema = new mongoose.Schema({
             ref: 'Unit',
             required: true
         },
+        // e.g. ראש צוות. Shown to the user instead of the role; gives no permissions
+        job_title: {
+            type: ObjectId,
+            ref: 'JobTitle',
+            required: true
+        },
         // set on every password change; logins from before it are signed out
         pass_changed_at: {
             type: Date

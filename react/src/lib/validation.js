@@ -42,7 +42,8 @@ export function validateUser(form, {requirePassword = false} = {}) {
     if (has('police_id') && !form.police_id.trim()) errors.police_id = 'צריך למלא מספר אישי';
     if (has('phone') && !PHONE_RE.test(form.phone)) errors.phone = 'עד 10 ספרות, בלי מקפים';
     if (has('email') && !EMAIL_RE.test(form.email.trim())) errors.email = 'כתובת אימייל לא תקינה';
-    if (has('role') && !form.role) errors.role = 'צריך לבחור תפקיד';
+    if (has('job_title') && !form.job_title) errors.job_title = 'צריך לבחור תפקיד';
+    if (has('role') && !form.role) errors.role = 'צריך לבחור הרשאה';
     if (has('unit') && !form.unit) errors.unit = 'צריך לבחור יחידה';
     return errors;
 }

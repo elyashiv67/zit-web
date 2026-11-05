@@ -21,11 +21,13 @@ export class ApiError extends Error {
 const KNOWN = {
     'invalid username or password': 'שם משתמש או סיסמה שגויים',
     'too many failed attempts, try again in 15 minutes': 'יותר מדי ניסיונות. נסו שוב בעוד 15 דקות',
-    'account has no role or unit, contact an admin': 'לחשבון אין תפקיד או יחידה. פנו למנהל המערכת',
+    'account has no role or unit, contact an admin': 'לחשבון אין הרשאה או יחידה. פנו למנהל המערכת',
     'current password is wrong': 'הסיסמה הנוכחית שגויה',
     'new password must be different from the current one': 'הסיסמה החדשה חייבת להיות שונה מהנוכחית',
     'Cannot delete the last admin': 'אי אפשר למחוק את המנהל האחרון',
-    'Cannot change the role of the last admin': 'אי אפשר לשנות את התפקיד של המנהל האחרון',
+    // the role is the permission (admin / user); "תפקיד" is the job title
+    'Cannot change the role of the last admin': 'אי אפשר לשנות את ההרשאה של המנהל האחרון',
+    'Cannot delete job title: still assigned to one or more users': 'אי אפשר למחוק תפקיד שמשויך למשתמשים',
     'Cannot delete unit: it still has pins': 'אי אפשר למחוק יחידה שיש בה נקודות',
     'Cannot delete unit: still assigned to one or more users': 'אי אפשר למחוק יחידה שיש בה משתמשים',
     'password was changed, need to login': 'הסיסמה שונתה. התחברו מחדש',
@@ -34,7 +36,7 @@ const KNOWN = {
 
 const FIELD_NAMES = {
     user_name: 'שם המשתמש', TZ: 'תעודת הזהות', police_id: 'המספר האישי',
-    phone: 'הטלפון', email: 'האימייל', name: 'השם', station: 'התחנה',
+    phone: 'הטלפון', email: 'האימייל', name: 'השם', station: 'התחנה', job_title: 'התפקיד',
 };
 
 function messageFor(status, data) {

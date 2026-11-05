@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {ADMIN, findHeading, makeUser, renderApp, ROLES, UNIT} from '../test/utils.jsx';
+import {ADMIN, findHeading, makeUser, renderApp, ROLES, TITLES, UNIT} from '../test/utils.jsx';
 
 const user = makeUser();
 
@@ -77,11 +77,27 @@ describe('history', () => {
 });
 
 describe('profile', () => {
-    it('shows who I am', async () => {
+    it('shows who I am, with my job title and not my permission', async () => {
         renderApp('/profile', {user});
         await findHeading('דנה כהן');
         expect(screen.getByText('עפולה, עמקים, צפון')).toBeInTheDocument();
         expect(screen.getByText('dana')).toBeInTheDocument();
+        expect(screen.getByText('תפקיד').closest('.details-row')).toHaveTextContent('חוקר זיט');
+        expect(screen.queryByText('משתמש')).not.toBeInTheDocument();
+    });
+
+    it('an admin also sees only the job title, never "מנהל"', async () => {
+        renderApp('/profile', {user: makeUser({role: ROLES[0], is_admin: true, job_title: TITLES[1]})});
+        await findHeading('דנה כהן');
+        expect(screen.getByText('תפקיד').closest('.details-row')).toHaveTextContent('ראש צוות');
+        expect(screen.queryByText('מנהל')).not.toBeInTheDocument();
+    });
+
+    it('no job title yet (an old session): the row is simply not shown', async () => {
+        renderApp('/profile', {user: makeUser({job_title: null})});
+        await findHeading('דנה כהן');
+        expect(screen.queryByText('תפקיד')).not.toBeInTheDocument();
+        expect(screen.getByText('עפולה, עמקים, צפון')).toBeInTheDocument();
     });
 
     it('saves only the changed details', async () => {
@@ -136,22 +152,26 @@ describe('profile', () => {
 describe('admin', () => {
     const units = [UNIT, {_id: 'unit2', district: 'צפון', merhav: 'עמקים', station: 'נצרת'}];
     const people = [
-        {_id: 'admin1', name: 'אבי לוי', user_name: 'avi', TZ: '1', police_id: '1', phone: '0500000001', email: 'a@t.l', role: 'roleAdmin', unit: 'unit1'},
-        {_id: 'u1', name: 'דנה כהן', user_name: 'dana', TZ: '2', police_id: '2', phone: '0500000002', email: 'd@t.l', role: 'roleUser', unit: 'unit1'},
+        {_id: 'admin1', name: 'אבי לוי', user_name: 'avi', TZ: '1', police_id: '1', phone: '0500000001', email: 'a@t.l', role: 'roleAdmin', unit: 'unit1', job_title: 'jt2'},
+        {_id: 'u1', name: 'דנה כהן', user_name: 'dana', TZ: '2', police_id: '2', phone: '0500000002', email: 'd@t.l', role: 'roleUser', unit: 'unit1', job_title: 'jt1'},
     ];
     const baseApi = () => ({
         'GET /role': ROLES,
         'GET /unit': units,
+        'GET /jobTitle': TITLES,
         'GET /user': {items: people, page: 1, limit: 20, total: 2, pages: 1},
     });
 
-    it('lists users with role and unit names, and no delete button on myself', async () => {
+    it('lists users with job title, admin mark and unit names, and no delete button on myself', async () => {
         renderApp('/admin', {user: ADMIN, api: baseApi()});
         await findHeading('ניהול');
         const rows = await screen.findAllByRole('listitem');
         expect(rows[0]).toHaveTextContent('אבי לוי (את/ה)');
+        expect(rows[0]).toHaveTextContent('ראש צוות');
         expect(rows[0]).toHaveTextContent('מנהל');
-        expect(rows[1]).toHaveTextContent('משתמש');
+        expect(rows[1]).toHaveTextContent('חוקר זיט');
+        expect(rows[1]).not.toHaveTextContent('מנהל');
+        expect(rows[1]).not.toHaveTextContent('משתמש');
         expect(within(rows[0]).queryByRole('button', {name: /מחיקת/})).not.toBeInTheDocument();
         expect(within(rows[1]).getByRole('button', {name: 'מחיקת דנה כהן'})).toBeInTheDocument();
     });
@@ -170,6 +190,8 @@ describe('admin', () => {
         await userEvent.click(within(sheet).getByRole('button', {name: 'יצירת המשתמש'}));
         expect(within(sheet).getByText('צריך למלא שם')).toBeInTheDocument();
         expect(within(sheet).getByText('צריך לבחור יחידה')).toBeInTheDocument();
+        expect(within(sheet).getByLabelText('תפקיד')).toHaveAccessibleDescription('צריך לבחור תפקיד');
+        expect(within(sheet).getByLabelText('הרשאה')).toHaveAccessibleDescription('צריך לבחור הרשאה');
         expect(server.callsTo('POST', '/auth/register')).toHaveLength(0);
 
         const fill = async (label, text) => userEvent.type(within(sheet).getByLabelText(label), text);
@@ -180,7 +202,8 @@ describe('admin', () => {
         await fill('מספר אישי', '3');
         await fill('טלפון', '0500000003');
         await fill('אימייל', 'm@t.l');
-        await userEvent.selectOptions(within(sheet).getByLabelText('תפקיד'), 'roleUser');
+        await userEvent.selectOptions(within(sheet).getByLabelText('תפקיד'), 'jt2');
+        await userEvent.selectOptions(within(sheet).getByLabelText('הרשאה'), 'roleUser');
         await userEvent.selectOptions(within(sheet).getByLabelText('יחידה'), 'unit2');
         await userEvent.click(within(sheet).getByRole('button', {name: 'יצירת המשתמש'}));
         expect(await within(sheet).findByRole('alert')).toHaveTextContent('שם המשתמש כבר קיים במערכת');
@@ -189,7 +212,7 @@ describe('admin', () => {
         expect(await screen.findByText('המשתמש נוצר')).toBeInTheDocument();
         expect(server.callsTo('POST', '/auth/register')[1].body).toEqual({
             name: 'משה', user_name: 'moshe', pass: 'secret1', TZ: '3', police_id: '3',
-            phone: '0500000003', email: 'm@t.l', role: 'roleUser', unit: 'unit2',
+            phone: '0500000003', email: 'm@t.l', role: 'roleUser', unit: 'unit2', job_title: 'jt2',
         });
         expect(screen.queryByRole('dialog', {name: 'משתמש חדש'})).not.toBeInTheDocument();
     });
@@ -217,9 +240,9 @@ describe('admin', () => {
         await screen.findAllByRole('listitem');
         await userEvent.click(screen.getByRole('button', {name: 'עריכת אבי לוי'}));
         const sheet = screen.getByRole('dialog', {name: 'עריכת אבי לוי'});
-        await userEvent.selectOptions(within(sheet).getByLabelText('תפקיד'), 'roleUser');
+        await userEvent.selectOptions(within(sheet).getByLabelText('הרשאה'), 'roleUser');
         await userEvent.click(within(sheet).getByRole('button', {name: 'שמירת השינויים'}));
-        expect(await within(sheet).findByRole('alert')).toHaveTextContent('אי אפשר לשנות את התפקיד של המנהל האחרון');
+        expect(await within(sheet).findByRole('alert')).toHaveTextContent('אי אפשר לשנות את ההרשאה של המנהל האחרון');
     });
 
     it('resets a password without the current one', async () => {
@@ -276,6 +299,96 @@ describe('admin', () => {
         await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', {name: 'מחיקת היחידה'}));
         expect(await screen.findByText('אי אפשר למחוק יחידה שיש בה משתמשים')).toBeInTheDocument();
         expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    });
+
+    it('a user without a job title is flagged in the list', async () => {
+        renderApp('/admin', {user: ADMIN, api: {...baseApi(),
+            'GET /user': {items: [people[0], {...people[1], job_title: undefined}], page: 1, limit: 20, total: 2, pages: 1}}});
+        const rows = await screen.findAllByRole('listitem');
+        expect(rows[1]).toHaveTextContent('חסר תפקיד');
+    });
+
+    it("changes a user's job title, sending only that", async () => {
+        const {server} = renderApp('/admin', {user: ADMIN, api: {
+            ...baseApi(),
+            'PATCH /user/u1': {user: {...people[1], job_title: TITLES[1], unit: UNIT, role: ROLES[1]}},
+        }});
+        await screen.findAllByRole('listitem');
+        await userEvent.click(screen.getByRole('button', {name: 'עריכת דנה כהן'}));
+        const sheet = screen.getByRole('dialog', {name: 'עריכת דנה כהן'});
+        expect(within(sheet).getByLabelText('תפקיד')).toHaveValue('jt1');
+        await userEvent.selectOptions(within(sheet).getByLabelText('תפקיד'), 'jt2');
+        await userEvent.click(within(sheet).getByRole('button', {name: 'שמירת השינויים'}));
+        expect(await screen.findByText('המשתמש עודכן')).toBeInTheDocument();
+        expect(server.callsTo('PATCH', '/user/u1')[0].body).toEqual({job_title: 'jt2'});
+        expect(screen.getAllByRole('listitem')[1]).toHaveTextContent('ראש צוות');
+    });
+
+    it('job titles: add, rename (users list follows without a reload) and delete', async () => {
+        const {server} = renderApp('/admin', {user: ADMIN, api: {
+            ...baseApi(),
+            'POST /jobTitle': {status: 201, body: {jobTitle: {_id: 'jt3', name: 'סייר'}}},
+            'PATCH /jobTitle/jt1': {jobTitle: {_id: 'jt1', name: 'חוקר זיט בכיר'}},
+            'DELETE /jobTitle/jt3': {id: 'jt3'},
+        }});
+        await screen.findAllByRole('listitem');
+        await userEvent.click(screen.getByRole('tab', {name: 'תפקידים'}));
+        expect(screen.getAllByRole('listitem').map(li => li.textContent)).toEqual(['חוקר זיט', 'ראש צוות']);
+
+        await userEvent.click(screen.getByRole('button', {name: /תפקיד חדש/}));
+        let sheet = screen.getByRole('dialog', {name: 'תפקיד חדש'});
+        await userEvent.click(within(sheet).getByRole('button', {name: 'הוספת התפקיד'}));
+        expect(within(sheet).getByLabelText('שם התפקיד')).toHaveAccessibleDescription('צריך למלא שם לתפקיד');
+        await userEvent.type(within(sheet).getByLabelText('שם התפקיד'), '  סייר ');
+        await userEvent.click(within(sheet).getByRole('button', {name: 'הוספת התפקיד'}));
+        await screen.findByText('התפקיד נוסף');
+        expect(server.callsTo('POST', '/jobTitle')[0].body).toEqual({name: 'סייר'});
+        expect(screen.getAllByRole('listitem')).toHaveLength(3);
+
+        await userEvent.click(screen.getByRole('button', {name: 'עריכת חוקר זיט'}));
+        sheet = screen.getByRole('dialog', {name: 'עריכת חוקר זיט'});
+        await userEvent.clear(within(sheet).getByLabelText('שם התפקיד'));
+        await userEvent.type(within(sheet).getByLabelText('שם התפקיד'), 'חוקר זיט בכיר');
+        await userEvent.click(within(sheet).getByRole('button', {name: 'שמירת השינויים'}));
+        await screen.findByText('התפקיד עודכן');
+        expect(server.callsTo('PATCH', '/jobTitle/jt1')[0].body).toEqual({name: 'חוקר זיט בכיר'});
+
+        await userEvent.click(screen.getByRole('button', {name: 'מחיקת סייר'}));
+        await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', {name: 'מחיקת התפקיד'}));
+        await screen.findByText('התפקיד נמחק');
+        expect(screen.getAllByRole('listitem')).toHaveLength(2);
+
+        // the users tab shows the renamed title right away
+        await userEvent.click(screen.getByRole('tab', {name: 'משתמשים'}));
+        expect((await screen.findAllByRole('listitem'))[1]).toHaveTextContent('חוקר זיט בכיר');
+        expect(server.callsTo('GET', '/jobTitle')).toHaveLength(1);
+    });
+
+    it("job titles: a title still given to users cannot be deleted, and the server's reason is shown in Hebrew", async () => {
+        renderApp('/admin', {user: ADMIN, api: {
+            ...baseApi(),
+            'DELETE /jobTitle/jt1': {status: 409, body: {message: 'Cannot delete job title: still assigned to one or more users'}},
+        }});
+        await screen.findAllByRole('listitem');
+        await userEvent.click(screen.getByRole('tab', {name: 'תפקידים'}));
+        await userEvent.click(screen.getByRole('button', {name: 'מחיקת חוקר זיט'}));
+        await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', {name: 'מחיקת התפקיד'}));
+        expect(await screen.findByText('אי אפשר למחוק תפקיד שמשויך למשתמשים')).toBeInTheDocument();
+        expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    });
+
+    it('job titles: a duplicate name is explained in the form', async () => {
+        renderApp('/admin', {user: ADMIN, api: {
+            ...baseApi(),
+            'POST /jobTitle': {status: 409, body: {message: 'name already exists', field: 'name', fields: ['name']}},
+        }});
+        await screen.findAllByRole('listitem');
+        await userEvent.click(screen.getByRole('tab', {name: 'תפקידים'}));
+        await userEvent.click(screen.getByRole('button', {name: /תפקיד חדש/}));
+        const sheet = screen.getByRole('dialog', {name: 'תפקיד חדש'});
+        await userEvent.type(within(sheet).getByLabelText('שם התפקיד'), 'ראש צוות');
+        await userEvent.click(within(sheet).getByRole('button', {name: 'הוספת התפקיד'}));
+        expect(await within(sheet).findByRole('alert')).toHaveTextContent('תפקיד בשם הזה כבר קיים');
     });
 
     it('closing a form with Esc or the X discards it', async () => {

@@ -34,7 +34,7 @@ async function addPin(req, res) {
 
 async function updatePin(req, res) {
     // req.pin is loaded by isPinUnitOrAdmin; save() runs schema validators
-    const {dvr, dvr_owner, ...updates} = req.valid_body;
+    const {dvr, dvr_owner, marker, ...updates} = req.valid_body;
     // dot-notation paths so a partial dvr update only touches the keys sent
     // (setting updates.dvr = {...} would replace the whole subdoc); null removes the key
     if (dvr) {
@@ -47,6 +47,11 @@ async function updatePin(req, res) {
         for (const key of ['name', 'id_number', 'phone', 'notes']) {
             updates[`dvr_owner.${key}`] = dvr_owner?.[key];
         }
+    }
+    // the marker the same way: both keys set, or both removed with null
+    if (marker !== undefined) {
+        updates['marker.icon'] = marker?.icon;
+        updates['marker.color'] = marker?.color;
     }
     req.pin.set(updates);
     const updatedPin = await req.pin.save();

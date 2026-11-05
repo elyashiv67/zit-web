@@ -8,6 +8,8 @@ import {Field, PasswordField} from '../components/Field.jsx';
 import LazyPinMap from '../components/LazyPinMap.jsx';
 import PageSkeleton from '../components/PageSkeleton.jsx';
 import ErrorState from '../components/ErrorState.jsx';
+import MarkerPicker from '../components/MarkerPicker.jsx';
+import {DEFAULT_MARKER, findMarker} from '../lib/markers.js';
 import {MAX_IMAGES_PER_PIN, uploadPinImages} from '../lib/pinImages.js';
 import {onlyDigits, validatePin} from '../lib/validation.js';
 
@@ -48,6 +50,10 @@ function PinForm({pin}) {
     const [formError, setFormError] = useState('');
     const [busy, setBusy] = useState(false);
     const [locating, setLocating] = useState(false);
+    // a new pin starts with the default look; an existing pin with its own marker, or with none (null) — it then
+    // keeps the plain red dot until someone picks, and the picker shows nothing chosen
+    const storedMarker = findMarker(pin?.marker) ? {icon: pin.marker.icon, color: pin.marker.color} : null;
+    const [marker, setMarker] = useState(editing ? storedMarker : DEFAULT_MARKER);
 
     const set = key => e => setForm(f => ({...f, [key]: e.target.value}));
     const locationErrors = validatePin(form);
@@ -89,7 +95,9 @@ function PinForm({pin}) {
             // the server replaces the owner as a whole, so send it only when something changed (null removes it)
             const owner = ownerFrom(form);
             if (JSON.stringify(owner) !== JSON.stringify(ownerFrom(toForm(pin)))) body.dvr_owner = owner;
+            if (marker && (marker.icon !== storedMarker?.icon || marker.color !== storedMarker?.color)) body.marker = marker;
         } else {
+            body.marker = marker;
             if (form.dvrUser || form.dvrPass) {
                 body.dvr = {...(form.dvrUser && {user_name: form.dvrUser}), ...(form.dvrPass && {password: form.dvrPass})};
             }
@@ -127,6 +135,11 @@ function PinForm({pin}) {
 
                 <section className="section">
                     <Field label="שם הנקודה" value={form.name} onChange={set('name')} error={errors.name} maxLength={100} />
+                </section>
+
+                <section className="section" aria-labelledby="marker-title">
+                    <h2 id="marker-title" className="section-title">סמל על המפה</h2>
+                    <MarkerPicker value={marker} onChange={setMarker} />
                 </section>
 
                 <section className="section" aria-labelledby="loc-title">

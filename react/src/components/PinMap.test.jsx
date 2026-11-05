@@ -24,6 +24,34 @@ describe('PinMap (real Leaflet)', () => {
         expect(container.querySelectorAll('.map-pin')).toHaveLength(2);
     });
 
+    it('a pin with a marker shows its icon on its color', async () => {
+        const {container} = renderMap({pins: [
+            makePin({_id: 'a', name: 'צומת', marker: {icon: 'cctv', color: 'blue'}}),
+            makePin({_id: 'b', name: 'חנות', location: {lat: 32.61, lng: 35.3}, marker: {icon: 'store', color: 'yellow'}}),
+        ]});
+        await waitFor(() => expect(container.querySelectorAll('.map-marker')).toHaveLength(2));
+        const [cctv, store] = container.querySelectorAll('.map-marker');
+        expect(cctv).toHaveAttribute('data-icon', 'cctv');
+        expect(cctv).toHaveAttribute('data-color', 'blue');
+        expect(cctv.style.getPropertyValue('--c')).toBe('#1A73E8');
+        expect(cctv.querySelector('svg.lucide-cctv')).not.toBeNull();
+        // yellow gets the dark icon
+        expect(store).toHaveClass('map-marker-dark');
+        expect(store.querySelector('svg.lucide-store')).not.toBeNull();
+        // the names still show, one per pin
+        expect([...container.querySelectorAll('.map-label')].map(l => l.textContent)).toEqual(['צומת', 'חנות']);
+    });
+
+    it('a pin without a marker, or with one the app does not know, stays the plain red dot', async () => {
+        const {container} = renderMap({pins: [
+            makePin({_id: 'a', name: 'ישן'}),
+            makePin({_id: 'b', name: 'מוזר', location: {lat: 32.61, lng: 35.3}, marker: {icon: 'tank', color: 'blue'}}),
+        ]});
+        await waitFor(() => expect(container.querySelectorAll('.map-pin')).toHaveLength(2));
+        expect(container.querySelector('.map-marker')).toBeNull();
+        expect(container.querySelectorAll('.map-label')).toHaveLength(2);
+    });
+
     it('picking a location in the form shows only the picked dot, no labels', async () => {
         const {container} = renderMap({picked: {lat: 32.6, lng: 35.29}, onPick: () => {}});
         await waitFor(() => expect(container.querySelectorAll('.map-pin-picked')).toHaveLength(1));

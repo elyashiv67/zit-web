@@ -3,7 +3,7 @@
 import fsx from 'node:fs';
 import sharp from 'sharp';
 
-const {BASE, ADMIN_ROLE, USER_ROLE, HOME_UNIT: AFULA, UPLOADS_DIR} = process.env;
+const {BASE, ADMIN_ROLE, USER_ROLE, HOME_UNIT: AFULA, UPLOADS_DIR, JOB_TITLE} = process.env;
 const SESSION_COOKIE = 'zit.sid';
 const FAKE_ID = '0123456789abcdef01234567';
 const R = Math.floor(Math.random() * 1e6).toString().padStart(6, '0');
@@ -64,7 +64,7 @@ function userBody(tag, role, unit) {
         name: `__test ${tag}`, user_name: `__test_${tag}_${R}`, pass: 'secret123',
         TZ: `9${R}${n}`, police_id: `p${R}${n}`,
         phone: `05${R}${n}`,
-        email: `__test_${tag}_${R}@Test.com`, role, unit,
+        email: `__test_${tag}_${R}@Test.com`, role, unit, job_title: JOB_TITLE,
     };
 }
 
@@ -134,6 +134,26 @@ await t('patch role (no-op, same level)', admin, 'PATCH', `/role/${USER_ROLE}`, 
 await t('patch role missing -> 404', admin, 'PATCH', `/role/${FAKE_ID}`, {level: 5}, 404);
 await t('delete role missing -> 404', admin, 'DELETE', `/role/${FAKE_ID}`, undefined, 404);
 
+console.log('\n== job titles');
+await t('list job titles (logged out) -> 401', anon, 'GET', '/jobTitle', undefined, 401);
+r = await t('admin creates a job title (trimmed)', admin, 'POST', '/jobTitle', {name: `  ראש צוות ${R} `}, 201,
+    d => must(d.jobTitle?.name === `ראש צוות ${R}`, JSON.stringify(d.jobTitle)));
+ids.title = r.data.jobTitle?._id;
+await t('duplicate job title -> 409', admin, 'POST', '/jobTitle', {name: `ראש צוות ${R}`}, 409);
+for (const [label, name] of [['blank', '   '], ['51 chars', 'x'.repeat(51)], ['missing', undefined]])
+    await t(`job title ${label} -> 400`, admin, 'POST', '/jobTitle', {name}, 400);
+r = await t('second job title', admin, 'POST', '/jobTitle', {name: `אאא ${R}`}, 201);
+ids.title2 = r.data.jobTitle?._id;
+await t('list job titles, sorted by name', admin, 'GET', '/jobTitle', undefined, 200, d => {
+    const names = d.map(x => x.name);
+    return must(names.includes(`ראש צוות ${R}`) && names.join('|') === [...names].sort((a, b) => a.localeCompare(b, 'he')).join('|'), names.join('|'));
+});
+await t('rename job title', admin, 'PATCH', `/jobTitle/${ids.title2}`, {name: `בבב ${R}`}, 200, d => must(d.jobTitle?.name === `בבב ${R}`, 'not renamed'));
+await t('rename to an existing name -> 409', admin, 'PATCH', `/jobTitle/${ids.title2}`, {name: `ראש צוות ${R}`}, 409);
+await t('rename missing -> 404', admin, 'PATCH', `/jobTitle/${FAKE_ID}`, {name: 'x'}, 404);
+await t('delete job title missing -> 404', admin, 'DELETE', `/jobTitle/${FAKE_ID}`, undefined, 404);
+await t('delete unused job title', admin, 'DELETE', `/jobTitle/${ids.title2}`, undefined, 200, d => must(d.id === ids.title2, 'wrong id'));
+
 console.log('\n== users');
 const u1Body = userBody('u1', USER_ROLE, AFULA);
 r = await t('admin registers user1 (Afula)', admin, 'POST', '/auth/register', u1Body, 201, d => must(!('pass' in d.user), 'pass leaked'));
@@ -149,6 +169,34 @@ if (ids.u1) await t('delete role in use -> 409', admin, 'DELETE', `/role/${USER_
 else { console.log('SKIP  delete role in use (user1 not created) — aborting'); process.exit(1); }
 await t('login user1', u1, 'POST', '/auth/login', {username: u1Body.user_name, password: 'secret123'}, 200, d => must(d.user.is_admin === false, 'should not be admin'));
 await t('login user2', u2, 'POST', '/auth/login', {username: u2Body.user_name, password: 'secret123'}, 200);
+await t('a user can list job titles', u1, 'GET', '/jobTitle', undefined, 200, isArr);
+await t('a user cannot create a job title -> 403', u1, 'POST', '/jobTitle', {name: `x ${R}`}, 403);
+await t('a user cannot rename a job title -> 403', u1, 'PATCH', `/jobTitle/${ids.title}`, {name: `x ${R}`}, 403);
+await t('a user cannot delete a job title -> 403', u1, 'DELETE', `/jobTitle/${ids.title}`, undefined, 403);
+
+console.log('\n== user job title');
+{
+    const {job_title: _, ...noTitle} = userBody('nt', USER_ROLE, AFULA);
+    await t('register without a job title -> 400', admin, 'POST', '/auth/register', noTitle, 400);
+    await t('register with an unknown job title -> 400', admin, 'POST', '/auth/register', {...userBody('ut', USER_ROLE, AFULA), job_title: FAKE_ID}, 400,
+        d => must(d.field === 'job_title', JSON.stringify(d)));
+}
+await t('login / me carry the job title name', u1, 'GET', '/auth/me', undefined, 200,
+    d => must(d.user?.job_title?.name === 'test title' && d.user.job_title._id === JOB_TITLE, JSON.stringify(d.user?.job_title)));
+await t('the admin too', admin, 'GET', '/auth/me', undefined, 200, d => must(d.user?.job_title?.name === 'test title', JSON.stringify(d.user?.job_title)));
+await t('users list keeps job_title as an id', admin, 'GET', '/user?limit=100', undefined, 200,
+    d => must(d.items.find(u => u._id === ids.u1)?.job_title === JOB_TITLE, 'not an id'));
+await t('get user shows the job title name', admin, 'GET', `/user/${ids.u1}`, undefined, 200, d => must(d.job_title?.name === 'test title', JSON.stringify(d.job_title)));
+await t('a user changing their own job title is ignored', u1, 'PATCH', `/user/${ids.u1}`, {name: u1Body.name, job_title: ids.title}, 200);
+await t('...so it stays the same', u1, 'GET', '/auth/me', undefined, 200, d => must(d.user?.job_title?.name === 'test title', JSON.stringify(d.user?.job_title)));
+await t('admin changes a user\'s job title', admin, 'PATCH', `/user/${ids.u1}`, {job_title: ids.title}, 200,
+    d => must(d.user?.job_title?.name === `ראש צוות ${R}`, JSON.stringify(d.user?.job_title)));
+await t('the user sees the new title right away', u1, 'GET', '/auth/me', undefined, 200, d => must(d.user?.job_title?.name === `ראש צוות ${R}`, JSON.stringify(d.user?.job_title)));
+await t('admin sets an unknown job title -> 400', admin, 'PATCH', `/user/${ids.u1}`, {job_title: FAKE_ID}, 400, d => must(d.field === 'job_title', JSON.stringify(d)));
+await t('delete a job title in use -> 409', admin, 'DELETE', `/jobTitle/${ids.title}`, undefined, 409);
+await t('renaming a title renames it for its users', admin, 'PATCH', `/jobTitle/${ids.title}`, {name: `ראש משמרת ${R}`}, 200);
+await t('...as the user sees it', u1, 'GET', '/auth/me', undefined, 200, d => must(d.user?.job_title?.name === `ראש משמרת ${R}`, JSON.stringify(d.user?.job_title)));
+await t('job title is not a permission: still not admin', u1, 'GET', '/auth/me', undefined, 200, d => must(d.user?.is_admin === false, 'became admin'));
 await t('user1 cannot use /auth/register -> 403', u1, 'POST', '/auth/register', userBody('zz', USER_ROLE, AFULA), 403);
 await t('list users (admin)', admin, 'GET', '/user', undefined, 200, d => must(Array.isArray(d.items) && d.items.length > 0 && d.items.every(u => !('pass' in u)), 'pass leaked / no items'));
 await t('users page shape', admin, 'GET', '/user?limit=1', undefined, 200,
@@ -273,6 +321,27 @@ r = await t('add pin with dvr owner', u1, 'POST', '/pin', {name: `__test pin own
     d => must(d.pin?.dvr_owner?.name === 'רינה' && d.pin.dvr_owner.phone === '046000000' && !('id_number' in d.pin.dvr_owner), JSON.stringify(d.pin?.dvr_owner)));
 await t('add pin owner without name -> 400', u1, 'POST', '/pin', {name: 'x', location: {lat: 1, lng: 1}, dvr_owner: {notes: 'n'}}, 400);
 await t('remove the owner test pin', u1, 'DELETE', `/pin/${r.data.pin?._id}`, undefined, 200);
+// the map marker: one icon + one color from fixed lists, replaced whole on PATCH, null removes it
+// key order doesn't matter (Mongo keeps the order fields were first set in)
+const sorted = o => o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b))) : o;
+const sameJson = (a, b) => JSON.stringify(sorted(a)) === JSON.stringify(sorted(b));
+await t('set marker', u1, 'PATCH', `/pin/${ids.pin}`, {marker: {icon: 'cctv', color: 'blue'}}, 200,
+    d => must(sameJson(d.pin?.marker, {icon: 'cctv', color: 'blue'}), JSON.stringify(d.pin?.marker)));
+await t('marker shows in the unit list', u1, 'GET', '/pin/allUnit', undefined, 200, d => must(d.find(p => p._id === ids.pin)?.marker?.color === 'blue', 'missing in list'));
+for (const [label, marker] of [
+    ['unknown icon', {icon: 'tank', color: 'blue'}], ['unknown color', {icon: 'cctv', color: 'pink'}],
+    ['without a color', {icon: 'cctv'}], ['without an icon', {color: 'red'}], ['as a string', 'cctv'],
+])
+    await t(`marker ${label} -> 400`, u1, 'PATCH', `/pin/${ids.pin}`, {marker}, 400);
+await t('marker replaced whole', u1, 'PATCH', `/pin/${ids.pin}`, {marker: {icon: 'store', color: 'yellow'}}, 200,
+    d => must(sameJson(d.pin?.marker, {icon: 'store', color: 'yellow'}), JSON.stringify(d.pin?.marker)));
+await t('marker removed with null', u1, 'PATCH', `/pin/${ids.pin}`, {marker: null}, 200, d => must(!('marker' in d.pin), JSON.stringify(d.pin.marker)));
+r = await t('add pin with marker', u1, 'POST', '/pin', {name: `__test pin marker ${R}`, location: {lat: 32.62, lng: 35.32}, marker: {icon: 'eye', color: 'black'}}, 201,
+    d => must(sameJson(d.pin?.marker, {icon: 'eye', color: 'black'}), JSON.stringify(d.pin?.marker)));
+await t('remove the marker test pin', u1, 'DELETE', `/pin/${r.data.pin?._id}`, undefined, 200);
+r = await t('add pin without marker', u1, 'POST', '/pin', {name: `__test pin plain ${R}`, location: {lat: 32.63, lng: 35.33}}, 201,
+    d => must(!('marker' in d.pin), JSON.stringify(d.pin?.marker)));
+await t('remove the plain test pin', u1, 'DELETE', `/pin/${r.data.pin?._id}`, undefined, 200);
 await t('patch pin other user -> 403', u2, 'PATCH', `/pin/${ids.pin}`, {name: 'x'}, 403);
 await t('patch pin empty -> 400', u1, 'PATCH', `/pin/${ids.pin}`, {}, 400);
 await t('admin patches pin', admin, 'PATCH', `/pin/${ids.pin}`, {name: `__test pin2 ${R}`}, 200);

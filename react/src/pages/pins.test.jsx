@@ -256,6 +256,100 @@ describe('pin details', () => {
 });
 
 describe('pin form', () => {
+    it('a new pin gets the default marker: a blue security camera', async () => {
+        const created = makePin({_id: 'new1'});
+        const {server} = renderApp('/pins/new', {user, api: {'POST /pin': {status: 201, body: {pin: created}}, 'GET /pin/new1': created}});
+        await findHeading('נקודה חדשה');
+        expect(screen.getByRole('button', {name: 'מצלמת אבטחה'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', {name: 'כחול'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByTestId('marker-preview-text')).toHaveTextContent('מצלמת אבטחה, כחול');
+        await userEvent.type(screen.getByLabelText('שם הנקודה'), 'מחסום');
+        await userEvent.click(await screen.findByRole('button', {name: 'pick on map'}));
+        await userEvent.click(screen.getByRole('button', {name: /הוספת הנקודה/}));
+        await screen.findByText('הנקודה נוספה');
+        expect(server.callsTo('POST', '/pin')[0].body.marker).toEqual({icon: 'cctv', color: 'blue'});
+    });
+
+    it('choosing an icon and a color updates the preview and is sent', async () => {
+        const created = makePin({_id: 'new1'});
+        const {server} = renderApp('/pins/new', {user, api: {'POST /pin': {status: 201, body: {pin: created}}, 'GET /pin/new1': created}});
+        await findHeading('נקודה חדשה');
+        await userEvent.click(screen.getByRole('button', {name: 'חנות'}));
+        await userEvent.click(screen.getByRole('button', {name: 'צהוב'}));
+        expect(screen.getByRole('button', {name: 'חנות'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', {name: 'מצלמת אבטחה'})).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.getByRole('button', {name: 'צהוב'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', {name: 'כחול'})).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.getByTestId('marker-preview-text')).toHaveTextContent('חנות, צהוב');
+        await userEvent.type(screen.getByLabelText('שם הנקודה'), 'מכולת');
+        await userEvent.click(await screen.findByRole('button', {name: 'pick on map'}));
+        await userEvent.click(screen.getByRole('button', {name: /הוספת הנקודה/}));
+        await screen.findByText('הנקודה נוספה');
+        expect(server.callsTo('POST', '/pin')[0].body.marker).toEqual({icon: 'store', color: 'yellow'});
+    });
+
+    it("edit: the pin's marker is preselected, and a changed marker is sent", async () => {
+        const pin = makePin({marker: {icon: 'eye', color: 'green'}});
+        const {server} = renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': pin, 'PATCH /pin/pin1': {pin}}});
+        await findHeading('עריכת נקודה');
+        expect(screen.getByRole('button', {name: 'תצפית'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', {name: 'ירוק'})).toHaveAttribute('aria-pressed', 'true');
+        await userEvent.click(screen.getByRole('button', {name: 'סגול'}));
+        await userEvent.click(screen.getByRole('button', {name: /שמירת השינויים/}));
+        await screen.findByText('הנקודה עודכנה');
+        expect(server.callsTo('PATCH', '/pin/pin1')[0].body.marker).toEqual({icon: 'eye', color: 'purple'});
+    });
+
+    it('edit: an unchanged marker is not sent', async () => {
+        const pin = makePin({marker: {icon: 'eye', color: 'green'}});
+        const {server} = renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': pin, 'PATCH /pin/pin1': {pin}}});
+        await findHeading('עריכת נקודה');
+        await userEvent.type(screen.getByLabelText('שם הנקודה'), '2');
+        await userEvent.click(screen.getByRole('button', {name: /שמירת השינויים/}));
+        await screen.findByText('הנקודה עודכנה');
+        expect(server.callsTo('PATCH', '/pin/pin1')[0].body).not.toHaveProperty('marker');
+    });
+
+    it('edit of a pin without a marker: the picker shows nothing chosen and the preview says it stays the plain dot', async () => {
+        renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': makePin()}});
+        await findHeading('עריכת נקודה');
+        const pressed = screen.getAllByRole('button').filter(b => b.getAttribute('aria-pressed') === 'true');
+        expect(pressed).toHaveLength(0);
+        expect(screen.getByTestId('marker-preview-text')).toHaveTextContent('נקודה אדומה רגילה. בחרו סמל וצבע');
+    });
+
+    it('edit of a pin without a marker: choosing only a color uses the default icon, and the preview follows', async () => {
+        const pin = makePin();
+        const {server} = renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': pin, 'PATCH /pin/pin1': {pin}}});
+        await findHeading('עריכת נקודה');
+        await userEvent.click(screen.getByRole('button', {name: 'ירוק'}));
+        expect(screen.getByRole('button', {name: 'מצלמת אבטחה'})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByTestId('marker-preview-text')).toHaveTextContent('מצלמת אבטחה, ירוק');
+        await userEvent.click(screen.getByRole('button', {name: /שמירת השינויים/}));
+        await screen.findByText('הנקודה עודכנה');
+        expect(server.callsTo('PATCH', '/pin/pin1')[0].body.marker).toEqual({icon: 'cctv', color: 'green'});
+    });
+
+    it('edit of a pin without a marker: changing only the name keeps the plain red dot (no marker sent)', async () => {
+        const pin = makePin();
+        const {server} = renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': pin, 'PATCH /pin/pin1': {pin}}});
+        await findHeading('עריכת נקודה');
+        await userEvent.type(screen.getByLabelText('שם הנקודה'), '2');
+        await userEvent.click(screen.getByRole('button', {name: /שמירת השינויים/}));
+        await screen.findByText('הנקודה עודכנה');
+        expect(server.callsTo('PATCH', '/pin/pin1')[0].body).not.toHaveProperty('marker');
+    });
+
+    it('edit of a pin without a marker: picking one sends it, even the default look', async () => {
+        const pin = makePin();
+        const {server} = renderApp('/pins/pin1/edit', {user, api: {'GET /pin/pin1': pin, 'PATCH /pin/pin1': {pin}}});
+        await findHeading('עריכת נקודה');
+        await userEvent.click(screen.getByRole('button', {name: 'כחול'}));
+        await userEvent.click(screen.getByRole('button', {name: /שמירת השינויים/}));
+        await screen.findByText('הנקודה עודכנה');
+        expect(server.callsTo('PATCH', '/pin/pin1')[0].body.marker).toEqual({icon: 'cctv', color: 'blue'});
+    });
+
     it('flags missing name and location before sending', async () => {
         const {server} = renderApp('/pins/new', {user});
         await findHeading('נקודה חדשה');
@@ -285,6 +379,7 @@ describe('pin form', () => {
         await waitFor(() => expect(router.state.location.pathname).toBe('/pins/new1'));
         expect(server.callsTo('POST', '/pin')[0].body).toEqual({
             name: 'מחסום', location: {lat: 32.5, lng: 35.1}, dvr: {user_name: 'admin', password: 'pw'},
+            marker: {icon: 'cctv', color: 'blue'},
         });
         expect(server.callsTo('POST', '/pin/new1/images')).toHaveLength(1);
         expect(await screen.findByText('הנקודה נוספה')).toBeInTheDocument();
@@ -330,7 +425,7 @@ describe('pin form', () => {
         await userEvent.click(screen.getByRole('button', {name: /הוספת הנקודה/}));
         await screen.findByText('הנקודה נוספה');
         expect(server.callsTo('POST', '/pin')[0].body).toEqual({
-            name: 'מכולת', location: {lat: 32.5, lng: 35.1},
+            name: 'מכולת', location: {lat: 32.5, lng: 35.1}, marker: {icon: 'cctv', color: 'blue'},
             dvr_owner: {name: 'משה כהן', phone: '0521234567', notes: 'זמין בבוקר'},
         });
     });

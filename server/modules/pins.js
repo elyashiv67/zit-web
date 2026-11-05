@@ -60,6 +60,15 @@ const PinSchema = new mongoose.Schema({
             type: String
         }
     },
+    // how the pin looks on the map (keys checked in Pins_S.js); pins without one show the plain red dot
+    marker: {
+        icon: {
+            type: String
+        },
+        color: {
+            type: String
+        }
+    },
     assigned_unit: {
         type: ObjectId,
         ref: 'Unit',

@@ -7,11 +7,12 @@ import {routes} from '../router.jsx';
 
 export const UNIT = {_id: 'unit1', district: 'צפון', merhav: 'עמקים', station: 'עפולה'};
 export const ROLES = [{_id: 'roleAdmin', name: 'admin', level: 1}, {_id: 'roleUser', name: 'user', level: 2}];
+export const TITLES = [{_id: 'jt1', name: 'חוקר זיט'}, {_id: 'jt2', name: 'ראש צוות'}];
 
 export function makeUser(overrides = {}) {
     return {
         id: 'u1', name: 'דנה כהן', user_name: 'dana', TZ: '123', police_id: '555', phone: '0501234567',
-        email: 'dana@test.local', role: ROLES[1], unit: UNIT, is_admin: false, ...overrides,
+        email: 'dana@test.local', role: ROLES[1], unit: UNIT, job_title: TITLES[0], is_admin: false, ...overrides,
     };
 }
 export const ADMIN = makeUser({id: 'admin1', name: 'אבי לוי', user_name: 'avi', role: ROLES[0], is_admin: true});
