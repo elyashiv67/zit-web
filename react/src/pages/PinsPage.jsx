@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {Link} from 'react-router';
-import {Images, KeyRound, MapPinOff, Plus, Search, SearchX, UserRound} from 'lucide-react';
+import {ChevronDown, ChevronUp, Images, KeyRound, List, MapPinOff, Plus, Search, SearchX, UserRound} from 'lucide-react';
 import {api} from '../api/client.js';
 import {useAuth} from '../auth/AuthContext.jsx';
 import {useAsync, useDelayedFlag} from '../hooks/useAsync.js';
@@ -19,6 +19,8 @@ export default function PinsPage() {
     // admins can switch to every unit's pins (GET /pin); everyone else sees their unit
     const [scope, setScope] = useState('unit');
     const [query, setQuery] = useState('');
+    // the map is the main view; the list opens on demand
+    const [listOpen, setListOpen] = useState(false);
     const {data: pins, error, loading, reload} = useAsync(
         signal => api(scope === 'all' ? '/pin' : '/pin/allUnit', {signal}),
         [scope],
@@ -48,7 +50,7 @@ export default function PinsPage() {
             <label className="search-box">
                 <Search size={20} aria-hidden="true" />
                 <span className="visually-hidden">חיפוש נקודה</span>
-                <input type="search" placeholder="חיפוש לפי שם נקודה או בעלים"value={query} onChange={e => setQuery(e.target.value)} />
+                <input type="search" placeholder="חיפוש לפי שם נקודה או בעלים" value={query} onChange={e => setQuery(e.target.value)} />
             </label>
 
             {error && !pins ? (
@@ -68,7 +70,15 @@ export default function PinsPage() {
                     {visible.length === 0 ? (
                         <EmptyState icon={SearchX} title="לא נמצאה נקודה בשם הזה" />
                     ) : (
-                        <ul className="list pin-list">
+                        <button type="button" className="btn btn-outline-ink" onClick={() => setListOpen(open => !open)}
+                            aria-expanded={listOpen} aria-controls="pin-list">
+                            <List size={20} aria-hidden="true" />
+                            {listOpen ? 'הסתרת הרשימה' : `הצגת רשימת הנקודות (${visible.length})`}
+                            {listOpen ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
+                        </button>
+                    )}
+                    {visible.length > 0 && listOpen && (
+                        <ul className="list pin-list" id="pin-list">
                             {visible.map(pin => (
                                 <li key={pin._id}>
                                     <Link to={`/pins/${pin._id}`} className="row-card">

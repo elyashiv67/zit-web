@@ -18,4 +18,6 @@ afterEach(() => {
     cleanup();
     globalThis.sessionStorage?.clear();
     vi.restoreAllMocks();
+    // a test that fails while using fake timers must not leave them on for the next tests (they would all hang)
+    vi.useRealTimers();
 });

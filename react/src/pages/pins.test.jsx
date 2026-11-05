@@ -4,13 +4,33 @@ import userEvent from '@testing-library/user-event';
 import {ADMIN, findHeading, makePin, makeUser, renderApp} from '../test/utils.jsx';
 
 const user = makeUser();
+// the list is closed until the user asks for it
+const openList = async () => userEvent.click(await screen.findByRole('button', {name: /הצגת רשימת הנקודות/}));
 
 describe('pins list', () => {
+    it('the list starts closed; the button shows how many pins and opens / closes it', async () => {
+        renderApp('/pins', {user, api: {'GET /pin/allUnit': [makePin({_id: 'a', name: 'שער ראשי'}), makePin({_id: 'b', name: 'חניון'})]}});
+        const toggle = await screen.findByRole('button', {name: 'הצגת רשימת הנקודות (2)'});
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByRole('list')).not.toBeInTheDocument();
+        expect(await screen.findByTestId('map')).toHaveAttribute('data-pins', '2');
+
+        await userEvent.click(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        expect(toggle).toHaveAccessibleName('הסתרת הרשימה');
+        expect(screen.getByRole('list')).toHaveAttribute('id', 'pin-list');
+        expect(screen.getByText('שער ראשי')).toBeInTheDocument();
+
+        await userEvent.click(toggle);
+        expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    });
+
     it('lists the unit pins with a photo, or an icon when there are none', async () => {
         renderApp('/pins', {user, api: {'GET /pin/allUnit': [
             makePin({_id: 'a', name: 'שער ראשי', image: ['x.jpg']}),
             makePin({_id: 'b', name: 'חניון', image: [], dvr: {}}),
         ]}});
+        await openList();
         const list = await screen.findByRole('list');
         const rows = within(list).getAllByRole('link');
         expect(rows).toHaveLength(2);
@@ -30,6 +50,7 @@ describe('pins list', () => {
 
     it('search filters the list and the map', async () => {
         renderApp('/pins', {user, api: {'GET /pin/allUnit': [makePin({_id: 'a', name: 'שער ראשי'}), makePin({_id: 'b', name: 'חניון'})]}});
+        await openList();
         await screen.findByText('שער ראשי');
         await userEvent.type(screen.getByPlaceholderText('חיפוש לפי שם נקודה או בעלים'), 'חני');
         expect(screen.queryByText('שער ראשי')).not.toBeInTheDocument();
@@ -44,6 +65,7 @@ describe('pins list', () => {
         renderApp('/pins', {user, api: {'GET /pin/allUnit': [
             makePin({_id: 'a', name: 'שער ראשי'}), makePin({_id: 'b', name: 'חניון', dvr_owner: {name: 'משה כהן'}}),
         ]}});
+        await openList();
         await screen.findByText('שער ראשי');
         await userEvent.type(screen.getByPlaceholderText('חיפוש לפי שם נקודה או בעלים'), 'משה');
         expect(screen.queryByText('שער ראשי')).not.toBeInTheDocument();
@@ -63,20 +85,21 @@ describe('pins list', () => {
             : [makePin()])}});
         expect(await screen.findByText('השרת לא זמין כרגע. נסו שוב בעוד רגע')).toBeInTheDocument();
         await userEvent.click(screen.getByRole('button', {name: /נסו שוב/}));
-        expect(await screen.findByText('שער ראשי')).toBeInTheDocument();
+        expect(await screen.findByRole('button', {name: 'הצגת רשימת הנקודות (1)'})).toBeInTheDocument();
     });
 
     it('admins can switch to every unit', async () => {
         const {server} = renderApp('/pins', {user: ADMIN, api: {'GET /pin/allUnit': [makePin()], 'GET /pin': [makePin(), makePin({_id: 'z', name: 'אחר'})]}});
-        await screen.findByText('שער ראשי');
+        await screen.findByRole('button', {name: 'הצגת רשימת הנקודות (1)'});
         await userEvent.click(screen.getByRole('tab', {name: 'כל היחידות'}));
+        await openList();
         expect(await screen.findByText('אחר')).toBeInTheDocument();
         expect(server.callsTo('GET', '/pin')).toHaveLength(1);
     });
 
     it('regular users do not get the all-units switch', async () => {
         renderApp('/pins', {user, api: {'GET /pin/allUnit': [makePin()]}});
-        await screen.findByText('שער ראשי');
+        await screen.findByRole('button', {name: /הצגת רשימת הנקודות/});
         expect(screen.queryByRole('tab', {name: 'כל היחידות'})).not.toBeInTheDocument();
     });
 });
@@ -92,7 +115,7 @@ describe('loading skeletons', () => {
         expect(screen.getByRole('status', {name: 'טוען'})).toBeInTheDocument();
         await act(async () => { resolve([makePin()]); await vi.advanceTimersByTimeAsync(10); });
         expect(screen.queryByRole('status', {name: 'טוען'})).not.toBeInTheDocument();
-        expect(screen.getByText('שער ראשי')).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'הצגת רשימת הנקודות (1)'})).toBeInTheDocument();
         vi.useRealTimers();
     });
 });
