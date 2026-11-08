@@ -78,24 +78,69 @@ describe('time diff page (public)', () => {
         expectTime('זמן DVR', '2026-11-04T10:03:25');
     });
 
-    it('logged in: saves real/DVR/last-save to history', async () => {
+    it('logged in: saves name/real/DVR/last-save to history', async () => {
         const {server} = renderApp('/', {user: makeUser(), api: {'POST /timeDiff': {status: 201, body: {timeDiff: {}}}}});
         const save = await screen.findByRole('button', {name: /שמירה להיסטוריה/});
         expect(save).toBeDisabled();
+        setInput('שם (מצלמה / מקום)', '  מצלמה כניסה ');
         setInput('זמן DVR', '2026-11-04T10:03:25');
         setInput('זמן אמת', '2026-11-04T10:00:00');
         setInput('תאריך השמירה האחרונה', '2026-10-30');
         await userEvent.click(save);
         expect(await screen.findByText('ההפרש נשמר בהיסטוריה')).toBeInTheDocument();
         expect(server.callsTo('POST', '/timeDiff')[0].body).toEqual({
+            name: 'מצלמה כניסה',
             real_time: new Date('2026-11-04T10:00:00').toISOString(),
             dvr_time: new Date('2026-11-04T10:03:25').toISOString(),
             dvr_lastSave: '2026-10-30',
         });
+        // the page starts fresh for the next check, also after a refresh
+        expect(screen.getByLabelText('שם (מצלמה / מקום)')).toHaveValue('');
+        expect(screen.getByLabelText('זמן DVR')).toHaveValue('');
+        expect(screen.getByLabelText('זמן אמת')).toHaveValue('');
+        expect(screen.getByLabelText('תאריך השמירה האחרונה')).toHaveValue('');
+        expect(screen.getByText('הזינו את זמן ה-DVR ואת זמן האמת')).toBeInTheDocument();
+        expect(sessionStorage.getItem('zit.diffName')).toBeNull();
+        expect(sessionStorage.getItem('zit.dvrTime')).toBeNull();
+    });
+
+    it('a failed save keeps everything the user typed', async () => {
+        renderApp('/', {user: makeUser(), api: {'POST /timeDiff': {status: 503, body: {message: 'down'}}}});
+        setInput('שם (מצלמה / מקום)', 'מצלמה כניסה');
+        setInput('זמן DVR', '2026-11-04T10:03:25');
+        setInput('זמן אמת', '2026-11-04T10:00:00');
+        await userEvent.click(await screen.findByRole('button', {name: /שמירה להיסטוריה/}));
+        await screen.findByText('השרת לא זמין כרגע. נסו שוב בעוד רגע');
+        expect(screen.getByLabelText('שם (מצלמה / מקום)')).toHaveValue('מצלמה כניסה');
+        expectTime('זמן DVR', '2026-11-04T10:03:25');
+    });
+
+    it('saving without a name is blocked: the name field says why and gets the focus', async () => {
+        const {server} = renderApp('/', {user: makeUser(), api: {'POST /timeDiff': {status: 201, body: {timeDiff: {}}}}});
+        setInput('זמן DVR', '2026-11-04T10:03:25');
+        setInput('זמן אמת', '2026-11-04T10:00:00');
+        setInput('שם (מצלמה / מקום)', '   ');
+        await userEvent.click(await screen.findByRole('button', {name: /שמירה להיסטוריה/}));
+        const nameInput = screen.getByLabelText('שם (מצלמה / מקום)');
+        expect(nameInput).toHaveAccessibleDescription('צריך לתת שם לפני השמירה, כדי שכולם יבינו מה נבדק');
+        expect(nameInput).toHaveFocus();
+        expect(server.callsTo('POST', '/timeDiff')).toHaveLength(0);
+        // typing clears the error
+        await userEvent.type(nameInput, 'א');
+        expect(nameInput).not.toHaveAttribute('aria-invalid');
+    });
+
+    it('the name survives a trip to the login page too', async () => {
+        const first = renderApp('/');
+        setInput('שם (מצלמה / מקום)', 'מצלמה כניסה');
+        first.unmount();
+        renderApp('/');
+        expect(screen.getByLabelText('שם (מצלמה / מקום)')).toHaveValue('מצלמה כניסה');
     });
 
     it('a failed save shows the reason', async () => {
         renderApp('/', {user: makeUser(), api: {'POST /timeDiff': {status: 503, body: {message: 'database is unavailable, try again in a moment'}}}});
+        setInput('שם (מצלמה / מקום)', 'מצלמה כניסה');
         setInput('זמן DVR', '2026-11-04T10:03:25');
         setInput('זמן אמת', '2026-11-04T10:00:00');
         await userEvent.click(await screen.findByRole('button', {name: /שמירה להיסטוריה/}));

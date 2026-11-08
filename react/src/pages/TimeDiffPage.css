@@ -5,20 +5,21 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 16px 12px 14px;
+    gap: 4px;
+    padding: 20px 12px 18px;
     border-radius: var(--radius-card);
     background: var(--well);
     text-align: center;
 }
-.readout-direction { font-size: 16px; font-weight: 500; }
+/* "ה-DVR מאחר ב-" is half of the answer, so it is big too */
+.readout-direction { font-size: clamp(24px, 7vw, 30px); font-weight: 800; line-height: 1.2; }
 .readout-clock {
-    font-size: clamp(44px, 14vw, 60px);
+    font-size: clamp(54px, 18vw, 76px);
     font-weight: 800;
     line-height: 1.05;
     letter-spacing: 1px;
 }
-.readout-days { font-size: 17px; font-weight: 700; }
+.readout-days { font-size: clamp(20px, 6vw, 24px); font-weight: 800; }
 .readout-empty {
     flex-direction: row;
     justify-content: center;

@@ -5,7 +5,7 @@
 import {beforeAll, describe, expect, it, vi} from 'vitest';
 import {offsetParts, partsFromMs, toLocalInput} from '../lib/timeMath.js';
 
-const {BASE, TEST_ADMIN} = process.env;
+const {BASE, TEST_ADMIN, JOB_TITLE} = process.env;
 const ADMIN_PASSWORD = 'secret123';
 // a real 1x1 PNG, so the server's image pipeline (sharp) actually runs
 const PNG = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
@@ -31,7 +31,8 @@ function useCookieJar() {
     return jar;
 }
 
-describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
+// every step is a round trip to the real database (Atlas), so allow more than the default 5s per test
+describe.skipIf(!BASE)('frontend ↔ real server contract', {timeout: 20_000}, () => {
     let api, ApiError, apiUrl, uploadPinImages, jar;
     const ids = {};
 
@@ -55,6 +56,8 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
         expect(user).toMatchObject({id: expect.any(String), name: expect.any(String), is_admin: true});
         expect(user.unit).toMatchObject({_id: expect.any(String), station: expect.any(String), merhav: expect.any(String)});
         expect(user.role).toMatchObject({name: 'admin'});
+        // the profile shows this instead of the role
+        expect(user.job_title).toEqual({_id: JOB_TITLE, name: 'test title'});
         ids.admin = user.id;
         ids.unit = user.unit._id;
         const me = await api('/auth/me');
@@ -72,7 +75,7 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
     it('admin creates a user with the exact body the admin form sends; a duplicate gives the Hebrew 409', async () => {
         const body = {
             name: 'בודק חוזה', user_name: `contract_${R}`, pass: 'secret1', TZ: `9${R}`, police_id: `c${R}`,
-            phone: `05${R}`.slice(0, 10), email: `c${R}@test.local`, role: ids.userRole, unit: ids.unit,
+            phone: `05${R}`.slice(0, 10), email: `c${R}@test.local`, role: ids.userRole, unit: ids.unit, job_title: JOB_TITLE,
         };
         const {user} = await api('/auth/register', {method: 'POST', body});
         ids.user = user._id ?? user.id;
@@ -86,7 +89,7 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
         const res = await api('/user?page=1&limit=20');
         expect(res).toMatchObject({page: 1, limit: 20, total: expect.any(Number), pages: expect.any(Number)});
         const row = res.items.find(u => u._id === ids.user);
-        expect(row).toMatchObject({role: ids.userRole, unit: ids.unit});
+        expect(row).toMatchObject({role: ids.userRole, unit: ids.unit, job_title: JOB_TITLE});
         expect(row).not.toHaveProperty('pass');
     });
 
@@ -103,6 +106,18 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
         expect(full.dvr).toEqual({user_name: 'dvr', password: 'pw1'});
         await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {name: 'נקודת חוזה', location: {lat: 32.6, lng: 35.29}, dvr: {password: null}}});
         expect((await api(`/pin/${ids.pin}`)).dvr).toEqual({user_name: 'dvr'});
+        // the DVR owner, as the form sends it: whole on change, null to remove
+        await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {dvr_owner: {name: 'משה כהן', phone: '0521234567', notes: 'בבוקר'}}});
+        expect((await api(`/pin/${ids.pin}`)).dvr_owner).toEqual({name: 'משה כהן', phone: '0521234567', notes: 'בבוקר'});
+        await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {dvr_owner: {name: 'משה כהן'}}});
+        expect((await api(`/pin/${ids.pin}`)).dvr_owner).toEqual({name: 'משה כהן'});
+        await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {dvr_owner: null}});
+        expect(await api(`/pin/${ids.pin}`)).not.toHaveProperty('dvr_owner');
+        // the map marker, as the picker sends it: whole on change, null back to the plain dot
+        await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {marker: {icon: 'store', color: 'yellow'}}});
+        expect((await api('/pin/allUnit')).find(p => p._id === ids.pin).marker).toEqual({icon: 'store', color: 'yellow'});
+        await api(`/pin/${ids.pin}`, {method: 'PATCH', body: {marker: null}});
+        expect(await api(`/pin/${ids.pin}`)).not.toHaveProperty('marker');
         const list = await api('/pin/allUnit');
         expect(list.find(p => p._id === ids.pin)).toBeTruthy();
     });
@@ -123,12 +138,13 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', () => {
         const dvr = new Date('2026-11-04T10:03:25');
         const {timeDiff} = await api('/timeDiff', {
             method: 'POST',
-            body: {real_time: real.toISOString(), dvr_time: dvr.toISOString(), dvr_lastSave: toLocalInput(new Date('2026-10-30T00:00:00'), false)},
+            body: {name: 'מצלמת חוזה', real_time: real.toISOString(), dvr_time: dvr.toISOString(), dvr_lastSave: toLocalInput(new Date('2026-10-30T00:00:00'), false)},
         });
         ids.diff = timeDiff._id;
         expect(timeDiff.offset_ms).toBe(offsetParts(real, dvr).ms);
         const page = await api('/timeDiff/my?page=1&limit=20');
         const saved = page.items.find(d => d._id === ids.diff);
+        expect(saved.name).toBe('מצלמת חוזה');
         expect(partsFromMs(saved.offset_ms)).toMatchObject({direction: 'ahead', minutes: 3, seconds: 25});
         expect((await api('/timeDiff/allUnit?page=1&limit=20')).items.some(d => d._id === ids.diff)).toBe(true);
         await api(`/timeDiff/${ids.diff}`, {method: 'DELETE'});

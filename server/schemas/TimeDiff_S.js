@@ -10,6 +10,7 @@ const isoDate = z.union([z.iso.datetime({offset: true}), z.iso.date()], {error: 
     .transform(s => new Date(s));
 
 const addTimeDiffSchema = z.object({
+    name: z.string().trim().min(1).max(100),
     real_time: isoDate,
     dvr_time: isoDate,
     dvr_lastSave: isoDate.optional(),

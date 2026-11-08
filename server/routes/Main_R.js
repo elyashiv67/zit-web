@@ -5,6 +5,7 @@ import userRouter from '../routes/Users_R.js';
 import authRouter from '../routes/Auth_R.js';
 import pinRouter from '../routes/Pins_R.js';
 import timeDiffRouter from '../routes/TimeDiff_R.js';
+import jobTitleRouter from '../routes/JobTitles_R.js';
 
 const router = express.Router();
 
@@ -14,5 +15,6 @@ router.use('/user', userRouter);
 router.use('/auth', authRouter);
 router.use('/pin', pinRouter);
 router.use('/timeDiff', timeDiffRouter);
+router.use('/jobTitle', jobTitleRouter);
 
 export default router;

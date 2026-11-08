@@ -1,7 +1,7 @@
 import {useState} from 'react';
-import {Link, useNavigate, useParams} from 'react-router';
+import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import {
-    Camera, Copy, Eye, EyeOff, ImageOff, KeyRound, MapPinOff, Navigation, Pencil, Trash2, UserRound, X,
+    ArrowRight, Camera, Contact, Copy, Eye, EyeOff, ImageOff, KeyRound, MapPinOff, Navigation, Pencil, Phone, Trash2, UserRound, X,
 } from 'lucide-react';
 import {api, apiUrl} from '../api/client.js';
 import {useAsync} from '../hooks/useAsync.js';
@@ -51,6 +51,42 @@ function DvrBox({dvr}) {
                     <button type="button" className="icon-btn" onClick={() => copy(dvr.password, 'הסיסמה')} aria-label="העתקת הסיסמה">
                         <Copy size={18} aria-hidden="true" />
                     </button>
+                </div>
+            )}
+        </dl>
+    );
+}
+
+// who owns the DVR, with a tap-to-call phone
+function OwnerBox({owner}) {
+    if (!owner?.name) {
+        return <p className="section-text">לא נשמר בעל DVR לנקודה הזאת.</p>;
+    }
+    return (
+        <dl className="dvr-box">
+            <div className="dvr-row">
+                <dt>שם</dt>
+                <dd>{owner.name}</dd>
+            </div>
+            {owner.id_number && (
+                <div className="dvr-row">
+                    <dt>ת״ז</dt>
+                    <dd className="nums">{owner.id_number}</dd>
+                </div>
+            )}
+            {owner.phone && (
+                <div className="dvr-row">
+                    <dt>טלפון</dt>
+                    <dd className="nums">{owner.phone}</dd>
+                    <a className="icon-btn" href={`tel:${owner.phone}`} aria-label={`התקשרות אל ${owner.name}`}>
+                        <Phone size={18} aria-hidden="true" />
+                    </a>
+                </div>
+            )}
+            {owner.notes && (
+                <div className="dvr-row owner-notes">
+                    <dt>הערות</dt>
+                    <dd>{owner.notes}</dd>
                 </div>
             )}
         </dl>
@@ -156,6 +192,23 @@ function Gallery({pin, onChange}) {
     );
 }
 
+// back to the pins list. Opened from inside the app it goes back in history (so the browser's back button
+// doesn't return to this pin); opened from a shared link or a reload there is no history, so it goes to /pins
+function BackToList() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const goBack = e => {
+        if (location.key === 'default') return;
+        e.preventDefault();
+        navigate(-1);
+    };
+    return (
+        <Link to="/pins" onClick={goBack} className="back-link" aria-label="חזרה לרשימת הנקודות">
+            <ArrowRight size={20} aria-hidden="true" /> חזרה
+        </Link>
+    );
+}
+
 export default function PinDetailPage() {
     const {id} = useParams();
     const navigate = useNavigate();
@@ -167,6 +220,7 @@ export default function PinDetailPage() {
     if (error && !pin) {
         return (
             <div className="page">
+                <BackToList />
                 {error.status === 404
                     ? <ErrorState icon={MapPinOff} message="הנקודה לא נמצאה. ייתכן שהיא נמחקה" />
                     : <ErrorState message={error.message} onRetry={reload} />}
@@ -194,6 +248,7 @@ export default function PinDetailPage() {
     const {lat, lng} = pin.location;
     return (
         <div className="page">
+            <BackToList />
             <div className="page-head">
                 <div>
                     <h1 className="page-title">{pin.name}</h1>
@@ -215,6 +270,11 @@ export default function PinDetailPage() {
             <section className="section" aria-labelledby="dvr-title">
                 <h2 id="dvr-title" className="section-title"><KeyRound size={20} aria-hidden="true" /> פרטי DVR</h2>
                 <DvrBox dvr={pin.dvr} />
+            </section>
+
+            <section className="section" aria-labelledby="owner-title">
+                <h2 id="owner-title" className="section-title"><Contact size={20} aria-hidden="true" /> בעל ה-DVR</h2>
+                <OwnerBox owner={pin.dvr_owner} />
             </section>
 
             <Gallery pin={pin} onChange={applyPin} />

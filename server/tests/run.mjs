@@ -22,7 +22,7 @@ if (conn.name === realDbName || !/test/i.test(conn.name)) {
     process.exit(1);
 }
 
-// seed: the two roles, one unit and an admin to log in with
+// seed: the two roles, one unit, one job title and an admin to log in with
 await conn.dropDatabase();
 const db = conn.db;
 const now = {createdAt: new Date(), updatedAt: new Date(), __v: 0};
@@ -31,10 +31,11 @@ const {insertedIds: roleIds} = await db.collection('roles').insertMany([
     {name: 'user', level: 2, ...now},
 ]);
 const {insertedId: unitId} = await db.collection('units').insertOne({district: 'Tzafon', merhav: 'Amakim', station: 'Afula', ...now});
+const {insertedId: jobTitleId} = await db.collection('jobtitles').insertOne({name: 'test title', ...now});
 const {insertedId: adminId} = await db.collection('users').insertOne({
     name: 'test admin', user_name: 'test_admin', pass: await bcrypt.hash('secret123', 10),
     TZ: '000000001', police_id: 'p0001', phone: '0500000001', email: 'test_admin@test.com',
-    role: roleIds[0], unit: unitId, ...now,
+    role: roleIds[0], unit: unitId, job_title: jobTitleId, ...now,
 });
 
 const testEnv = {
@@ -43,6 +44,7 @@ const testEnv = {
     BASE: `http://localhost:${PORT}`,
     TEST_ADMIN: 'test_admin', TEST_ADMIN_ID: adminId.toString(),
     ADMIN_ROLE: roleIds[0].toString(), USER_ROLE: roleIds[1].toString(), HOME_UNIT: unitId.toString(),
+    JOB_TITLE: jobTitleId.toString(),
 };
 
 const server = spawn(process.execPath, ['index.js'], {cwd: SERVER_DIR, env: testEnv, stdio: ['ignore', 'pipe', 'inherit']});

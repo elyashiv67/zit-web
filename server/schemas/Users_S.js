@@ -11,6 +11,7 @@ const userKeys = {
     email: z.string().trim().toLowerCase().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, {message: 'invalid email'}),
     role: objectId,
     unit: objectId,
+    job_title: objectId,
 };
 
 const registerUserSchema = z.object({
@@ -23,6 +24,7 @@ const registerUserSchema = z.object({
     email: userKeys.email,
     role: userKeys.role,
     unit: userKeys.unit,
+    job_title: userKeys.job_title,
 });
 
 // what users may change on themselves; if more fields should be updatable, add them here

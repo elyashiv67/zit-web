@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {Link} from 'react-router';
-import {Images, KeyRound, MapPinOff, Plus, Search, SearchX, UserRound} from 'lucide-react';
+import {ChevronDown, ChevronUp, Images, KeyRound, List, MapPinOff, Plus, Search, SearchX, UserRound} from 'lucide-react';
 import {api} from '../api/client.js';
 import {useAuth} from '../auth/AuthContext.jsx';
 import {useAsync, useDelayedFlag} from '../hooks/useAsync.js';
@@ -11,11 +11,16 @@ import LazyPinMap from '../components/LazyPinMap.jsx';
 import PinThumb from '../components/PinThumb.jsx';
 import './PinsPage.css';
 
+// the map is the main way to find a pin here: about half the screen on a phone, never tiny, capped on big screens
+const MAP_HEIGHT = 'clamp(320px, 55vh, 600px)';
+
 export default function PinsPage() {
     const {user} = useAuth();
     // admins can switch to every unit's pins (GET /pin); everyone else sees their unit
     const [scope, setScope] = useState('unit');
     const [query, setQuery] = useState('');
+    // the map is the main view; the list opens on demand
+    const [listOpen, setListOpen] = useState(false);
     const {data: pins, error, loading, reload} = useAsync(
         signal => api(scope === 'all' ? '/pin' : '/pin/allUnit', {signal}),
         [scope],
@@ -23,7 +28,8 @@ export default function PinsPage() {
     const showSkeleton = useDelayedFlag(loading && !pins);
 
     const q = query.trim().toLowerCase();
-    const visible = (pins ?? []).filter(p => !q || p.name.toLowerCase().includes(q));
+    // by the pin's name or the DVR owner's name
+    const visible = (pins ?? []).filter(p => !q || [p.name, p.dvr_owner?.name].some(text => text?.toLowerCase().includes(q)));
 
     return (
         <div className="page">
@@ -44,14 +50,14 @@ export default function PinsPage() {
             <label className="search-box">
                 <Search size={20} aria-hidden="true" />
                 <span className="visually-hidden">חיפוש נקודה</span>
-                <input type="search" placeholder="חיפוש לפי שם" value={query} onChange={e => setQuery(e.target.value)} />
+                <input type="search" placeholder="חיפוש לפי שם נקודה או בעלים" value={query} onChange={e => setQuery(e.target.value)} />
             </label>
 
             {error && !pins ? (
                 <ErrorState message={error.message} onRetry={reload} />
             ) : showSkeleton ? (
                 <>
-                    <Skeleton height={220} radius={16} />
+                    <Skeleton height={MAP_HEIGHT} radius={16} />
                     <ListSkeleton rows={3} thumb />
                 </>
             ) : pins && pins.length === 0 ? (
@@ -60,11 +66,19 @@ export default function PinsPage() {
                     action={<Link to="/pins/new" className="btn btn-primary"><Plus size={20} aria-hidden="true" /> הוספת נקודה</Link>} />
             ) : pins ? (
                 <>
-                    <LazyPinMap pins={visible} />
+                    <LazyPinMap pins={visible} height={MAP_HEIGHT} wheelZoom />
                     {visible.length === 0 ? (
                         <EmptyState icon={SearchX} title="לא נמצאה נקודה בשם הזה" />
                     ) : (
-                        <ul className="list pin-list">
+                        <button type="button" className="btn btn-outline-ink" onClick={() => setListOpen(open => !open)}
+                            aria-expanded={listOpen} aria-controls="pin-list">
+                            <List size={20} aria-hidden="true" />
+                            {listOpen ? 'הסתרת הרשימה' : `הצגת רשימת הנקודות (${visible.length})`}
+                            {listOpen ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
+                        </button>
+                    )}
+                    {visible.length > 0 && listOpen && (
+                        <ul className="list pin-list" id="pin-list">
                             {visible.map(pin => (
                                 <li key={pin._id}>
                                     <Link to={`/pins/${pin._id}`} className="row-card">

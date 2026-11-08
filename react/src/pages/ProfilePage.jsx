@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {useNavigate} from 'react-router';
-import {Building2, CircleAlert, IdCard, KeyRound, LoaderCircle, LogOut, Mail, Phone, Save, Shield, UserRound} from 'lucide-react';
+import {BriefcaseBusiness, Building2, CircleAlert, IdCard, KeyRound, LoaderCircle, LogOut, Mail, Phone, Save, UserRound} from 'lucide-react';
 import {api} from '../api/client.js';
 import {useAuth} from '../auth/AuthContext.jsx';
 import {useToast} from '../components/Toast.jsx';
@@ -8,13 +8,15 @@ import {Field, PasswordField} from '../components/Field.jsx';
 import {validatePasswordChange, validateUser} from '../lib/validation.js';
 import './ProfilePage.css';
 
+// the job title, never the permission: only admins know who is an admin.
+// An account without a title (an old session) just skips the row
 function Details({user}) {
     const rows = [
         {icon: UserRound, label: 'שם משתמש', value: user.user_name, ltr: true},
-        {icon: Shield, label: 'תפקיד', value: user.is_admin ? 'מנהל' : 'משתמש'},
+        user.job_title?.name && {icon: BriefcaseBusiness, label: 'תפקיד', value: user.job_title.name},
         {icon: Building2, label: 'יחידה', value: [user.unit?.station, user.unit?.merhav, user.unit?.district].filter(Boolean).join(', ')},
         {icon: IdCard, label: 'מספר אישי', value: user.police_id, ltr: true},
-    ];
+    ].filter(Boolean);
     return (
         <dl className="details">
             {rows.map(({icon: Icon, label, value, ltr}) => (

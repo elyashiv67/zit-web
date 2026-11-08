@@ -2,15 +2,17 @@ import bcrypt from 'bcrypt';
 import User from '../modules/users.js';
 import Role from '../modules/roles.js';
 import Unit from '../modules/units.js';
+import JobTitle from '../modules/job_titles.js';
 import {startSession, endSession} from '../middleware/Auth_MID.js';
 import {findPage} from '../middleware/Paging_MID.js';
 
 // errors thrown here go to the error handler (Error_MID.js): duplicates -> 409 with `field`
 
-// role / unit ids in a body must point to real documents
-async function findMissingRef({role, unit}) {
+// role / unit / job_title ids in a body must point to real documents
+async function findMissingRef({role, unit, job_title}) {
     if (role && !(await Role.exists({_id: role}))) return 'role';
     if (unit && !(await Unit.exists({_id: unit}))) return 'unit';
+    if (job_title && !(await JobTitle.exists({_id: job_title}))) return 'job_title';
     return null;
 }
 
@@ -33,7 +35,7 @@ async function getAllUsers(req, res) {
 }
 
 async function getUserById(req, res) {
-    const user = await User.findById(req.valid_id).populate('role').populate('unit').select('-pass');
+    const user = await User.findById(req.valid_id).populate('role').populate('unit').populate('job_title').select('-pass');
     if (!user)
         return res.status(404).json({message: 'User not found'});
     return res.status(200).json(user);
@@ -82,7 +84,7 @@ async function updateUser(req, res) {
     const id = req.valid_id;
     const updateValues = req.valid_body;
 
-    // role / unit only reach here for admins (adminUpdateUserSchema)
+    // role / unit / job_title only reach here for admins (adminUpdateUserSchema)
     const missing = await findMissingRef(updateValues);
     if (missing)
         return res.status(400).json({message: `${missing} not found`, field: missing});
@@ -100,7 +102,7 @@ async function updateUser(req, res) {
     // CheckLogin reloads the user on every request, so the changes apply to their
     // permissions and /auth/me right away
     const updatedUser = await User.findByIdAndUpdate(id, updateValues, {returnDocument: 'after', runValidators: true})
-        .populate('role').populate('unit');
+        .populate('role').populate('unit').populate('job_title');
     if (!updatedUser)
         return res.status(404).json({message: 'User not found'});
 

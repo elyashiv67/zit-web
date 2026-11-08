@@ -10,7 +10,8 @@ export default defineConfig({
     // in dev, call the API as fetch('/api/...') — same origin, so the auth cookie just works
     proxy: {
       '/api': {
-        target: 'http://localhost:4586',
+        // API_PROXY_TARGET lets a check run the app against another server (e.g. the seeded test server)
+        target: process.env.API_PROXY_TARGET ?? 'http://localhost:4586',
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },

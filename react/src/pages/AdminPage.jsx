@@ -1,5 +1,5 @@
 import {useId, useState} from 'react';
-import {Building2, ChevronDown, CircleAlert, KeyRound, LoaderCircle, Pencil, Plus, Shield, Trash2, UserPlus, UserRound, Users} from 'lucide-react';
+import {BriefcaseBusiness, Building2, ChevronDown, CircleAlert, KeyRound, LoaderCircle, Pencil, Plus, Shield, Trash2, UserPlus, UserRound, Users} from 'lucide-react';
 import {api} from '../api/client.js';
 import {useAuth} from '../auth/AuthContext.jsx';
 import {useAsync, useDelayedFlag} from '../hooks/useAsync.js';
@@ -13,6 +13,7 @@ import ErrorState from '../components/ErrorState.jsx';
 import Sheet from '../components/Sheet.jsx';
 import {validatePasswordChange, validateUnit, validateUser} from '../lib/validation.js';
 
+// the role is the permission (admin / user); only admins ever see it. Everyone sees the job title
 const roleLabel = role => (role?.name === 'admin' ? 'מנהל' : 'משתמש');
 const unitLabel = unit => (unit ? `${unit.station}, ${unit.merhav}` : 'ללא יחידה');
 
@@ -37,10 +38,10 @@ function FormError({text}) {
     return <div className="form-error" role="alert"><CircleAlert size={20} aria-hidden="true" /> {text}</div>;
 }
 
-const USER_FIELDS = ['name', 'user_name', 'TZ', 'police_id', 'phone', 'email', 'role', 'unit'];
+const USER_FIELDS = ['name', 'user_name', 'TZ', 'police_id', 'phone', 'email', 'job_title', 'role', 'unit'];
 
 // create (user = null) or edit a user. Editing sends only the fields that changed
-function UserForm({user, roles, units, onSaved}) {
+function UserForm({user, roles, units, titles, onSaved}) {
     const toast = useToast();
     const creating = !user;
     const [form, setForm] = useState(() => Object.fromEntries(
@@ -91,11 +92,13 @@ function UserForm({user, roles, units, onSaved}) {
                 <Field label="אימייל" value={form.email} onChange={set('email')} error={errors.email} type="email" dir="ltr" />
             </div>
             <div className="form-row">
-                <SelectField label="תפקיד" value={form.role} onChange={set('role')} error={errors.role} placeholder="בחירת תפקיד"
+                <SelectField label="תפקיד" value={form.job_title} onChange={set('job_title')} error={errors.job_title} placeholder="בחירת תפקיד"
+                    options={titles.map(t => ({value: t._id, label: t.name}))} />
+                <SelectField label="הרשאה" value={form.role} onChange={set('role')} error={errors.role} placeholder="בחירת הרשאה"
                     options={roles.map(r => ({value: r._id, label: roleLabel(r)}))} />
-                <SelectField label="יחידה" value={form.unit} onChange={set('unit')} error={errors.unit} placeholder="בחירת יחידה"
-                    options={units.map(u => ({value: u._id, label: unitLabel(u)}))} />
             </div>
+            <SelectField label="יחידה" value={form.unit} onChange={set('unit')} error={errors.unit} placeholder="בחירת יחידה"
+                options={units.map(u => ({value: u._id, label: unitLabel(u)}))} />
             <button type="submit" className="btn btn-primary" disabled={busy}>
                 {busy && <LoaderCircle size={20} className="spin" aria-hidden="true" />}
                 {creating ? 'יצירת המשתמש' : 'שמירת השינויים'}
@@ -138,7 +141,7 @@ function ResetPassword({user, onDone}) {
     );
 }
 
-function UsersTab({roles, units}) {
+function UsersTab({roles, units, titles}) {
     const {user: me, refresh} = useAuth();
     const toast = useToast();
     const list = usePagedList('/user');
@@ -148,10 +151,12 @@ function UsersTab({roles, units}) {
     const showSkeleton = useDelayedFlag(list.loading && list.items.length === 0);
     const roleById = Object.fromEntries(roles.map(r => [r._id, r]));
     const unitById = Object.fromEntries(units.map(u => [u._id, u]));
+    const titleById = Object.fromEntries(titles.map(t => [t._id, t]));
 
     const saved = updated => {
-        // PATCH answers with role / unit populated; the list keeps them as ids
-        if (updated && sheet.mode === 'edit') list.updateItem({...updated, role: updated.role?._id ?? updated.role, unit: updated.unit?._id ?? updated.unit});
+        // PATCH answers with role / unit / job_title populated; the list keeps them as ids
+        const idOf = ref => ref?._id ?? ref;
+        if (updated && sheet.mode === 'edit') list.updateItem({...updated, role: idOf(updated.role), unit: idOf(updated.unit), job_title: idOf(updated.job_title)});
         if (updated && sheet.mode === 'new') list.reload();
         if (updated?._id === me.id) refresh();
         setSheet(null);
@@ -195,7 +200,8 @@ function UsersTab({roles, units}) {
                                 <span className="row-meta">
                                     <span className="nums">{u.user_name}</span>
                                     <span><Building2 size={14} aria-hidden="true" /> {unitById[u.unit]?.station ?? 'ללא יחידה'}</span>
-                                    <span className="chip">{roleLabel(roleById[u.role])}</span>
+                                    <span className="chip">{titleById[u.job_title]?.name ?? 'חסר תפקיד'}</span>
+                                    {roleById[u.role]?.name === 'admin' && <span className="chip"><Shield size={14} aria-hidden="true" /> מנהל</span>}
                                 </span>
                             </div>
                             <button type="button" className="icon-btn" aria-label={`עריכת ${u.name}`} onClick={() => setSheet({mode: 'edit', user: u})}>
@@ -223,10 +229,112 @@ function UsersTab({roles, units}) {
                 title={sheet?.mode === 'new' ? 'משתמש חדש' : sheet?.mode === 'password' ? `איפוס סיסמה: ${sheet.user.name}` : `עריכת ${sheet?.user?.name ?? ''}`}>
                 {sheet?.mode === 'password'
                     ? <ResetPassword user={sheet.user} onDone={() => setSheet(null)} />
-                    : sheet && <UserForm user={sheet.user ?? null} roles={roles} units={units} onSaved={saved} />}
+                    : sheet && <UserForm user={sheet.user ?? null} roles={roles} units={units} titles={titles} onSaved={saved} />}
             </Sheet>
             <ConfirmDialog open={Boolean(toDelete)} title={`למחוק את ${toDelete?.name ?? ''}?`}
                 text="המשתמש לא יוכל להתחבר יותר. הנקודות שיצר נשארות ביחידה." confirmLabel="מחיקת המשתמש" danger busy={deleting}
+                onConfirm={remove} onCancel={() => setToDelete(null)} />
+        </>
+    );
+}
+
+// add or rename a job title (title = null for a new one)
+function TitleForm({title, onSaved}) {
+    const toast = useToast();
+    const [name, setName] = useState(title?.name ?? '');
+    const [error, setError] = useState('');
+    const [formError, setFormError] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const submit = async e => {
+        e.preventDefault();
+        const trimmed = name.trim();
+        setError(!trimmed ? 'צריך למלא שם לתפקיד' : trimmed.length > 50 ? 'עד 50 תווים' : '');
+        setFormError('');
+        if (!trimmed || trimmed.length > 50) return;
+        setBusy(true);
+        try {
+            const res = title
+                ? await api(`/jobTitle/${title._id}`, {method: 'PATCH', body: {name: trimmed}})
+                : await api('/jobTitle', {method: 'POST', body: {name: trimmed}});
+            toast.success(title ? 'התפקיד עודכן' : 'התפקיד נוסף');
+            onSaved(res.jobTitle);
+        } catch (err) {
+            setFormError(err.status === 409 ? 'תפקיד בשם הזה כבר קיים' : err.message);
+            setBusy(false);
+        }
+    };
+
+    return (
+        <form className="form" onSubmit={submit} noValidate>
+            <FormError text={formError} />
+            <Field label="שם התפקיד" value={name} onChange={e => { setName(e.target.value); setError(''); }} error={error}
+                maxLength={50} placeholder="למשל: ראש צוות" />
+            <button type="submit" className="btn btn-primary" disabled={busy}>
+                {busy && <LoaderCircle size={20} className="spin" aria-hidden="true" />}
+                {title ? 'שמירת השינויים' : 'הוספת התפקיד'}
+            </button>
+        </form>
+    );
+}
+
+// every user has one of these titles; the server refuses to delete a title someone still has
+function TitlesTab({titles, setTitles}) {
+    const toast = useToast();
+    const [sheet, setSheet] = useState(null); // {title} — title null for a new one
+    const [toDelete, setToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+    const byName = list => [...list].sort((a, b) => a.name.localeCompare(b.name, 'he'));
+
+    const saved = title => {
+        setTitles(list => byName(sheet.title ? list.map(t => (t._id === title._id ? title : t)) : [...list, title]));
+        setSheet(null);
+    };
+
+    const remove = async () => {
+        setDeleting(true);
+        try {
+            await api(`/jobTitle/${toDelete._id}`, {method: 'DELETE'});
+            setTitles(list => list.filter(t => t._id !== toDelete._id));
+            toast.success('התפקיד נמחק');
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setDeleting(false);
+            setToDelete(null);
+        }
+    };
+
+    return (
+        <>
+            <button type="button" className="btn btn-primary" onClick={() => setSheet({title: null})}>
+                <Plus size={20} aria-hidden="true" /> תפקיד חדש
+            </button>
+            {titles.length === 0 ? (
+                <EmptyState icon={BriefcaseBusiness} title="אין תפקידים" text="כל משתמש צריך תפקיד. הוסיפו את הראשון." />
+            ) : (
+                <ul className="list plain-list">
+                    {titles.map(t => (
+                        <li key={t._id} className="row-card">
+                            <div className="history-icon" aria-hidden="true"><BriefcaseBusiness size={22} /></div>
+                            <div className="row-main">
+                                <span className="row-title">{t.name}</span>
+                            </div>
+                            <button type="button" className="icon-btn" aria-label={`עריכת ${t.name}`} onClick={() => setSheet({title: t})}>
+                                <Pencil size={20} aria-hidden="true" />
+                            </button>
+                            <button type="button" className="icon-btn" aria-label={`מחיקת ${t.name}`} onClick={() => setToDelete(t)}>
+                                <Trash2 size={20} aria-hidden="true" />
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            <Sheet open={Boolean(sheet)} onClose={() => setSheet(null)} title={sheet?.title ? `עריכת ${sheet.title.name}` : 'תפקיד חדש'}>
+                {sheet && <TitleForm title={sheet.title} onSaved={saved} />}
+            </Sheet>
+            <ConfirmDialog open={Boolean(toDelete)} title={`למחוק את התפקיד ${toDelete?.name ?? ''}?`}
+                text="אפשר למחוק רק תפקיד שאף משתמש לא מחזיק בו." confirmLabel="מחיקת התפקיד" danger busy={deleting}
                 onConfirm={remove} onCancel={() => setToDelete(null)} />
         </>
     );
@@ -339,19 +447,22 @@ export default function AdminPage() {
     const [tab, setTab] = useState('users');
     const {data, error, loading, reload, setData} = useAsync(
         async signal => {
-            const [roles, units] = await Promise.all([api('/role', {signal}), api('/unit', {signal})]);
-            return {roles, units};
+            const [roles, units, titles] = await Promise.all([api('/role', {signal}), api('/unit', {signal}), api('/jobTitle', {signal})]);
+            return {roles, units, titles};
         },
         [],
     );
     const showSkeleton = useDelayedFlag(loading && !data);
     const setUnits = update => setData(d => ({...d, units: update(d.units)}));
+    // shared with the users tab, so a renamed title shows there without reloading
+    const setTitles = update => setData(d => ({...d, titles: update(d.titles)}));
 
     return (
         <div className="page">
             <h1 className="page-title">ניהול</h1>
             <div className="tabs" role="tablist" aria-label="מה לנהל">
                 <button type="button" role="tab" className="tab" aria-selected={tab === 'users'} onClick={() => setTab('users')}>משתמשים</button>
+                <button type="button" role="tab" className="tab" aria-selected={tab === 'titles'} onClick={() => setTab('titles')}>תפקידים</button>
                 <button type="button" role="tab" className="tab" aria-selected={tab === 'units'} onClick={() => setTab('units')}>יחידות</button>
             </div>
             {error && !data ? (
@@ -359,7 +470,9 @@ export default function AdminPage() {
             ) : !data ? (
                 showSkeleton ? <ListSkeleton rows={5} /> : null
             ) : tab === 'users' ? (
-                <UsersTab roles={data.roles} units={data.units} />
+                <UsersTab roles={data.roles} units={data.units} titles={data.titles} />
+            ) : tab === 'titles' ? (
+                <TitlesTab titles={data.titles} setTitles={setTitles} />
             ) : (
                 <UnitsTab units={data.units} setUnits={setUnits} />
             )}

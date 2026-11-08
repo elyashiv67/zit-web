@@ -3,6 +3,10 @@
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\d{1,10}$/;
+const ID_RE = /^\d{1,9}$/;
+
+// people type phones and IDs with spaces or dashes (052-123 4567); the server takes digits only
+export const onlyDigits = text => text.replace(/[\s-]/g, '');
 
 export function validatePin(form) {
     const errors = {};
@@ -15,6 +19,15 @@ export function validatePin(form) {
     if (form.lng === '' || Number.isNaN(lng) || lng < -180 || lng > 180) errors.lng = 'קו אורך בין ‎-180 ל-180';
     if (form.dvrUser.length > 100) errors.dvrUser = 'עד 100 תווים';
     if (form.dvrPass.length > 100) errors.dvrPass = 'עד 100 תווים';
+    // the DVR owner is optional, but once any of it is filled it needs a name
+    const ownerName = form.ownerName.trim();
+    const ownerId = onlyDigits(form.ownerId);
+    const ownerPhone = onlyDigits(form.ownerPhone);
+    if (!ownerName && (ownerId || ownerPhone || form.ownerNotes.trim())) errors.ownerName = 'צריך למלא את שם הבעלים';
+    else if (ownerName.length > 100) errors.ownerName = 'השם ארוך מדי (עד 100 תווים)';
+    if (ownerId && !ID_RE.test(ownerId)) errors.ownerId = 'עד 9 ספרות';
+    if (ownerPhone && !PHONE_RE.test(ownerPhone)) errors.ownerPhone = 'עד 10 ספרות';
+    if (form.ownerNotes.trim().length > 500) errors.ownerNotes = 'עד 500 תווים';
     return errors;
 }
 
@@ -29,7 +42,8 @@ export function validateUser(form, {requirePassword = false} = {}) {
     if (has('police_id') && !form.police_id.trim()) errors.police_id = 'צריך למלא מספר אישי';
     if (has('phone') && !PHONE_RE.test(form.phone)) errors.phone = 'עד 10 ספרות, בלי מקפים';
     if (has('email') && !EMAIL_RE.test(form.email.trim())) errors.email = 'כתובת אימייל לא תקינה';
-    if (has('role') && !form.role) errors.role = 'צריך לבחור תפקיד';
+    if (has('job_title') && !form.job_title) errors.job_title = 'צריך לבחור תפקיד';
+    if (has('role') && !form.role) errors.role = 'צריך לבחור הרשאה';
     if (has('unit') && !form.unit) errors.unit = 'צריך לבחור יחידה';
     return errors;
 }

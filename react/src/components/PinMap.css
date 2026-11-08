@@ -16,4 +16,51 @@
 }
 .map-pin-picked { box-shadow: 0 0 0 6px rgba(213, 72, 69, 0.35); }
 
+/* a chosen marker: the color fills the circle, the icon on top (same look as MarkerBadge in the pin form).
+   The wrapper is Leaflet's box, sized and anchored by the divIcon; it gets none of Leaflet's divIcon styles */
+.map-marker-wrap { background: none; border: none; }
+.map-marker {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--c);
+    color: var(--paper);
+    border: 2.5px solid var(--paper);
+    box-shadow: 0 2px 6px rgba(5, 5, 16, 0.45);
+}
+.map-marker svg { display: block; }
+.map-marker-dark { color: var(--ink); }
+
+/* pin names: plain map text with a light halo (like street names), not Leaflet's white box with an arrow,
+   so they read on any tile and never hide a neighbouring dot */
+.leaflet-tooltip.map-label {
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: 'Heebo', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--ink);
+    text-shadow:
+        0 0 2px var(--paper), 0 0 2px var(--paper), 0 0 3px var(--paper),
+        1px 1px 0 var(--paper), -1px -1px 0 var(--paper), 1px -1px 0 var(--paper), -1px 1px 0 var(--paper);
+    pointer-events: none;
+}
+.leaflet-tooltip.map-label::before { display: none; }
+/* Leaflet places tooltips with a transform only, and its CSS gives markers and tiles `left: 0` but not tooltips.
+   In an RTL page an absolute box without `left` hangs off the RIGHT edge of its anchor, so every label landed one
+   full label-width to the left of its dot. Pinning the box to the pane's top-left makes the transform exact. */
+.pin-map .leaflet-tooltip { left: 0; top: 0; }
+/* Leaflet pushes bottom tooltips 6px further down (room for its arrow, which is hidden here) */
+.leaflet-tooltip-bottom.map-label { margin-top: 0; }
+.pin-map-far .map-label { display: none; }
+
 .map-popup-link { font-family: 'Heebo', sans-serif; font-weight: 700; font-size: 15px; color: var(--surface); }
