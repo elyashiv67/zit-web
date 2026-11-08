@@ -78,14 +78,15 @@ function ClickToPick({onPick}) {
     return null;
 }
 
-// pins: [{_id, name, location}]  — or `picked` + `onPick` to choose a location in the pin form
-export default function PinMap({pins = [], picked, onPick, height = 220}) {
+// pins: [{_id, name, location}]  — or `picked` + `onPick` to choose a location in the pin form.
+// wheelZoom: the mouse wheel zooms the map. Off by default, so a small map inside a page doesn't catch the page scroll
+export default function PinMap({pins = [], picked, onPick, height = 220, wheelZoom = false}) {
     const points = picked ? [[picked.lat, picked.lng]] : pins.map(p => [p.location.lat, p.location.lng]);
     const [zoom, setZoom] = useState(13);
 
     return (
         <div className={`pin-map ${zoom < LABELS_MIN_ZOOM ? 'pin-map-far' : ''}`} style={{height}}>
-            <MapContainer center={points[0] ?? DEFAULT_CENTER} zoom={13} scrollWheelZoom={false} style={{height: '100%'}}>
+            <MapContainer center={points[0] ?? DEFAULT_CENTER} zoom={13} scrollWheelZoom={wheelZoom} style={{height: '100%'}}>
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

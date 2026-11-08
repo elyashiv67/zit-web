@@ -66,7 +66,7 @@ export default function PinsPage() {
                     action={<Link to="/pins/new" className="btn btn-primary"><Plus size={20} aria-hidden="true" /> הוספת נקודה</Link>} />
             ) : pins ? (
                 <>
-                    <LazyPinMap pins={visible} height={MAP_HEIGHT} />
+                    <LazyPinMap pins={visible} height={MAP_HEIGHT} wheelZoom />
                     {visible.length === 0 ? (
                         <EmptyState icon={SearchX} title="לא נמצאה נקודה בשם הזה" />
                     ) : (

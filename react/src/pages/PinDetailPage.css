@@ -62,3 +62,23 @@
 }
 .lightbox img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
 .lightbox-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+/* back to the list: sits above the title, at the start (right) edge; text on the grey page is ink */
+.back-link {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    /* pulled out by its own padding, so the arrow lines up with the title below */
+    margin-block: -8px;
+    margin-inline-start: -12px;
+    padding-inline: 12px 14px;
+    border-radius: var(--radius-input);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+}
+.back-link:hover { background: rgba(62, 77, 83, 0.15); }
+.back-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

@@ -8,6 +8,12 @@ const {default: PinMap} = await vi.importActual('./PinMap.jsx');
 
 const renderMap = props => render(<MemoryRouter><PinMap {...props} /></MemoryRouter>);
 
+// PinMap doesn't expose its Leaflet map; an init hook records every map Leaflet creates
+const {default: L} = await import('leaflet');
+const maps = [];
+L.Map.addInitHook(function () { maps.push(this); });
+const lastMap = () => maps.at(-1);
+
 describe('PinMap (real Leaflet)', () => {
     it('every pin shows its name under the dot, without a tap', async () => {
         const {container} = renderMap({pins: [
@@ -50,6 +56,17 @@ describe('PinMap (real Leaflet)', () => {
         await waitFor(() => expect(container.querySelectorAll('.map-pin')).toHaveLength(2));
         expect(container.querySelector('.map-marker')).toBeNull();
         expect(container.querySelectorAll('.map-label')).toHaveLength(2);
+    });
+
+    it('the mouse wheel zooms only when asked (wheelZoom), so small maps in a page do not trap scrolling', async () => {
+        const {container, unmount} = renderMap({pins: [makePin({_id: 'a'})], wheelZoom: true});
+        await waitFor(() => expect(container.querySelector('.map-pin')).not.toBeNull());
+        expect(lastMap().scrollWheelZoom.enabled()).toBe(true);
+        unmount();
+
+        const second = renderMap({pins: [makePin({_id: 'a'})]});
+        await waitFor(() => expect(second.container.querySelector('.map-pin')).not.toBeNull());
+        expect(lastMap().scrollWheelZoom.enabled()).toBe(false);
     });
 
     it('picking a location in the form shows only the picked dot, no labels', async () => {

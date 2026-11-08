@@ -1,7 +1,7 @@
 import {useState} from 'react';
-import {Link, useNavigate, useParams} from 'react-router';
+import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import {
-    Camera, Contact, Copy, Eye, EyeOff, ImageOff, KeyRound, MapPinOff, Navigation, Pencil, Phone, Trash2, UserRound, X,
+    ArrowRight, Camera, Contact, Copy, Eye, EyeOff, ImageOff, KeyRound, MapPinOff, Navigation, Pencil, Phone, Trash2, UserRound, X,
 } from 'lucide-react';
 import {api, apiUrl} from '../api/client.js';
 import {useAsync} from '../hooks/useAsync.js';
@@ -192,6 +192,23 @@ function Gallery({pin, onChange}) {
     );
 }
 
+// back to the pins list. Opened from inside the app it goes back in history (so the browser's back button
+// doesn't return to this pin); opened from a shared link or a reload there is no history, so it goes to /pins
+function BackToList() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const goBack = e => {
+        if (location.key === 'default') return;
+        e.preventDefault();
+        navigate(-1);
+    };
+    return (
+        <Link to="/pins" onClick={goBack} className="back-link" aria-label="חזרה לרשימת הנקודות">
+            <ArrowRight size={20} aria-hidden="true" /> חזרה
+        </Link>
+    );
+}
+
 export default function PinDetailPage() {
     const {id} = useParams();
     const navigate = useNavigate();
@@ -203,6 +220,7 @@ export default function PinDetailPage() {
     if (error && !pin) {
         return (
             <div className="page">
+                <BackToList />
                 {error.status === 404
                     ? <ErrorState icon={MapPinOff} message="הנקודה לא נמצאה. ייתכן שהיא נמחקה" />
                     : <ErrorState message={error.message} onRetry={reload} />}
@@ -230,6 +248,7 @@ export default function PinDetailPage() {
     const {lat, lng} = pin.location;
     return (
         <div className="page">
+            <BackToList />
             <div className="page-head">
                 <div>
                     <h1 className="page-title">{pin.name}</h1>

@@ -80,6 +80,9 @@ read it before working, and update the "Status" and "Next" sections when somethi
 - Known flake: the server suite sometimes fails 1–4 `/health` checks right after request bursts. It is the Atlas connection
   dropping; the code is unchanged since 868d5cb, which passed 234/234. Confirm against local Docker Mongo.
 - Real-browser checks exist now (see Frontend); the owner still reviews on a phone.
+- 2026-11-08 (branch `final-tweaks`): back link on the pin page (history back when opened in-app, else `/pins`; also on
+  not-found), mouse-wheel zoom on the pins list map only (`PinMap` `wheelZoom` prop, off elsewhere so page scroll isn't
+  trapped). Logo source packs moved to `react/assets/` (not imported; the header uses `src/assets/logo-2`). 147 UI tests.
 - Real DB test users (made on request): `elyashiv` (admin) and `testuser` (user) in unit Afula. The owner knows the passwords.
 
 Reports: `.claude/reports/frontend-report.html` is the full frontend build report (pages, tests, what the tests caught,

@@ -48,6 +48,11 @@ describe('pins list', () => {
         expect(await screen.findByTestId('map')).toHaveAttribute('data-pins', '2');
     });
 
+    it('the list map zooms with the mouse wheel', async () => {
+        renderApp('/pins', {user, api: {'GET /pin/allUnit': [makePin({_id: 'a'})]}});
+        expect(await screen.findByTestId('map')).toHaveAttribute('data-wheel-zoom', 'true');
+    });
+
     it('search filters the list and the map', async () => {
         renderApp('/pins', {user, api: {'GET /pin/allUnit': [makePin({_id: 'a', name: 'שער ראשי'}), makePin({_id: 'b', name: 'חניון'})]}});
         await openList();
@@ -243,10 +248,32 @@ describe('pin details', () => {
         expect(await screen.findByText('הנקודה נמחקה')).toBeInTheDocument();
     });
 
+    it('the back button opened from the list returns to it, without leaving the detail page in the history', async () => {
+        const {router} = renderApp('/pins', {user, api: {'GET /pin/allUnit': [detail], 'GET /pin/pin1': detail}});
+        await openList();
+        await userEvent.click(await screen.findByRole('link', {name: /שער ראשי/}));
+        await findHeading('שער ראשי');
+        await userEvent.click(screen.getByRole('link', {name: 'חזרה לרשימת הנקודות'}));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/pins'));
+        // it went back (POP), so the browser's back button won't return to the pin
+        expect(router.state.historyAction).toBe('POP');
+    });
+
+    it('the back button on a pin opened from a link (no history) goes to the list', async () => {
+        const {router} = renderApp('/pins/pin1', {user, api: {'GET /pin/pin1': detail, 'GET /pin/allUnit': []}});
+        await findHeading('שער ראשי');
+        const back = screen.getByRole('link', {name: 'חזרה לרשימת הנקודות'});
+        expect(back).toHaveAttribute('href', '/pins');
+        await userEvent.click(back);
+        await waitFor(() => expect(router.state.location.pathname).toBe('/pins'));
+    });
+
     it('a deleted / unknown pin shows "not found" without a retry', async () => {
         renderApp('/pins/gone', {user, api: {'GET /pin/gone': {status: 404, body: {message: 'pin not found'}}}});
         expect(await screen.findByText('הנקודה לא נמצאה. ייתכן שהיא נמחקה')).toBeInTheDocument();
         expect(screen.queryByRole('button', {name: /נסו שוב/})).not.toBeInTheDocument();
+        // still a way back to the list
+        expect(screen.getByRole('link', {name: 'חזרה לרשימת הנקודות'})).toHaveAttribute('href', '/pins');
     });
 
     it('another unit\'s pin: the server says 403 and the page says so', async () => {
