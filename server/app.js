@@ -18,7 +18,14 @@ function createApp() {
     app.use(helmet());
     if (env.NODE_ENV !== 'test')
         app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-    app.use(express.json());
+    // compressed bodies are refused: no client sends them, and inflating is extra work and attack surface
+    app.use(express.json({inflate: false}));
+    // nothing from the API may be kept by shared caches or proxies (user data, DVR logins).
+    // Pin images replace this with a private browser cache (controllers/Pins_C.js)
+    app.use((req, res, next) => {
+        res.set('Cache-Control', 'private, no-store');
+        next();
+    });
     app.use(sessionMiddleware());
 
     // for Docker / uptime checks — public, says nothing about users

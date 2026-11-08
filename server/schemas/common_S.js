@@ -1,7 +1,11 @@
 import {z} from 'zod';
-import mongoose from 'mongoose';
 
-const objectId = z.string().refine(id => mongoose.Types.ObjectId.isValid(id), {message: 'invalid id'});
+// exactly 24 hex characters, always lowercased. Mongo accepts other spellings of the same id
+// (capitals, or any 12-character string), and those would not compare equal to req.user.id,
+// so "is this my own account?" checks could be fooled. One spelling only, so string compares are safe.
+const objectId = z.string()
+    .regex(/^[0-9a-f]{24}$/i, {message: 'invalid id'})
+    .transform(id => id.toLowerCase());
 
 // for partial (PATCH) schemas: reject a body with nothing to update
 function atLeastOneField(schema) {

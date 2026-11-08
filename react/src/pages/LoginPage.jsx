@@ -4,9 +4,10 @@ import {CircleAlert, LoaderCircle, LogIn} from 'lucide-react';
 import {useAuth} from '../auth/AuthContext.jsx';
 import {Field, PasswordField} from '../components/Field.jsx';
 
-// only same-site paths, so ?next= can't send the user to another website
+// only same-site paths, so ?next= can't send the user to another website.
+// Browsers read both //host and /\host as another site, so neither may follow the first slash
 function safeNext(next) {
-    return next && next.startsWith('/') && !next.startsWith('//') ? next : '/pins';
+    return next && /^\/(?![/\\])/.test(next) ? next : '/pins';
 }
 
 export default function LoginPage() {

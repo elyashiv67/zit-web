@@ -36,7 +36,18 @@ read it before working, and update the "Status" and "Next" sections when somethi
 - Job titles (`/jobTitle`, admin-managed list, Hebrew sort) are separate from the role. Every user has a required
   `job_title`; `/auth/me` returns `job_title: {_id, name}`. Regular users see their title, never admin/user.
   `scripts/add-job-titles.mjs` (local only, gitignored) gave the 3 real users "חוקר זיט" on 2026-11-05 (safe to rerun).
-- `npm run dev` (port 4586), `npm test` (299 end-to-end checks on `zit_test`).
+- Security rules (2026-11-08, from `docs/security-report.html`):
+  - ids are exactly 24 hex and lowercased in `schemas/common_S.js`, so `===` against `req.user.id` is safe;
+  - passwords are 8+ characters and at most 72 bytes; bcrypt cost 12 (`config/passwords.js`), with older hashes
+    upgraded at login without touching `pass_changed_at`;
+  - a session without `login_at` is rejected;
+  - roles are read-only (GET only);
+  - API responses are `private, no-store`, and images are `private, max-age=86400`;
+  - uploads accept files only, and the signature (magic bytes) is checked before sharp;
+  - `express.json({inflate: false})`, so a gzip body gets 415;
+  - the session store uses `mongoose.connection.name`. Before this fix, test runs wrote their sessions to the real DB.
+- **30-day rolling login is on purpose** (owner, 2026-11-08). Don't shorten it.
+- `npm run dev` (port 4586), `npm test` (315 end-to-end checks on `zit_test`; reads the test DB directly for hashes and sessions).
   `node tests/run.mjs "<command>"` runs another suite against the seeded test server (it also seeds a job title, `JOB_TITLE`).
 - **Run the server with `npm run dev`** (nodemon). `npm start` does not reload, so code changes don't apply until a restart.
 
@@ -61,16 +72,18 @@ read it before working, and update the "Status" and "Next" sections when somethi
   Icons come from lucide-react.
 - Run: server `npm run dev`, then in `react/` run `npm run dev` → http://localhost:5173/zit-web/ (Vite proxies `/api` to 4586).
   Phone on the same Wi-Fi: `npm run dev -- --host`.
-- Tests in `react/`: `npm test` (141 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`
+- Tests in `react/`: `npm test` (149 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`
   except `PinMap.test.jsx`, which renders real Leaflet) and `npm run test:contract` (12 tests against a real server on
   `zit_test`). Lint: `npx eslint .`. `API_PROXY_TARGET=<url> npx vite` points the dev proxy at another API server.
 - Real-browser checks: Playwright with the installed Chrome, run through `server/tests/run.mjs` against `zit_test`
   (a second Vite on port 5174). Layout bugs (like the RTL label shift) only show up there, not in jsdom.
+  After a check, make sure nothing still listens on 5174. A leftover Vite from an older run keeps serving stale
+  dependencies ("Outdated Optimize Dep" 504, then the map's lazy import fails), and a new `--strictPort` Vite can't start.
 
 ## Status (last updated 2026-11-05)
 
 - Server: merged to main (PR #13, paging). Branch `start-front` holds the frontend work. **Commit it before switching machines.**
-- Frontend: all pages built. 141/141 UI tests, 12/12 contract tests, lint clean, build OK.
+- Frontend: all pages built. 149/149 UI tests, 12/12 contract tests, lint clean, build OK.
 - 2026-11-05: pin markers (8 icons × 8 colors, picker in the pin form) and job titles (admin "תפקידים" tab, required
   per user, shown in the profile instead of the permission). Checked in a real browser at phone size.
 - Local only (gitignored, not on GitHub): `docs/` (design + plan files), `server/postman/`, `server/scripts/`.
@@ -82,22 +95,30 @@ read it before working, and update the "Status" and "Next" sections when somethi
 - Real-browser checks exist now (see Frontend); the owner still reviews on a phone.
 - 2026-11-08 (branch `final-tweaks`): back link on the pin page (history back when opened in-app, else `/pins`; also on
   not-found), mouse-wheel zoom on the pins list map only (`PinMap` `wheelZoom` prop, off elsewhere so page scroll isn't
-  trapped). Logo source packs moved to `react/assets/` (not imported; the header uses `src/assets/logo-2`). 147 UI tests.
-- Real DB test users (made on request): `elyashiv` (admin) and `testuser` (user) in unit Afula. The owner knows the passwords.
+  trapped). Logo source packs moved to `react/assets/` (not imported; the header uses `src/assets/logo-2`).
+- 2026-11-08 security pass: fixed every code item in `docs/security-report.html` except session length (kept on purpose).
+  Packages updated: server body-parser 2.4.0 and multer 2.5.0 (prod audit clean; 2 moderate left in dev-only nodemon);
+  react-router 7.18.5 and vite 7.3.7 (0 advisories). Server 315/315, UI 149/149, contract 12/12, real-browser check OK.
+- The real DB has test accounts made on request. Their names are kept out of this file, which is public on GitHub.
+  Delete them before launch (owner's call).
 
 Reports: `.claude/reports/frontend-report.html` is the full frontend build report (pages, tests, what the tests caught,
-open items). Open it in a browser.
+open items). The security report is `docs/security-report.html`, local only because the repo is public.
+`.claude/reports/deployment-guide.html` is the step-by-step Docker deployment guide (13 steps, all config files in the
+appendix). It is tracked and public, so it must never get real secrets, names or domains. Its configs were not run yet
+(no Docker on the dev PC). Open them in a browser.
 
 ## Next
 
 1. Owner reviews the UI on a phone; fix whatever looks off.
-2. **Before deploying, remind the owner:**
-   - GitHub Pages is on a different site from the API, so the server needs CORS with credentials and the cookie must be
-     `SameSite=None; Secure`. Today it is Lax, which breaks a cross-site login silently. Alternative: serve the built app from
-     the same domain as the API (nginx/Docker), and then nothing changes.
-   - Set `VITE_API_URL` for the build when the API is on another origin.
-   - `SESSION_SECRET` is only 10 chars; it needs 32+ (production refuses to start otherwise).
-   - Back up `DVR_SECRET` (losing it makes the stored DVR passwords unreadable).
-   - Docker: `TRUST_PROXY=1`, `DB` pointing at the Mongo container, and mount `UPLOADS_DIR` as a volume.
-3. Optional: remove the duplicate `/auth/reg` route, the unused `server/environment/Auth_ENV.js` and `JWT_SECRET`,
-   rate limits kept in memory, and the test users in the real DB.
+2. **Deploy to a private server with Docker.** Follow the must-do list (M1–M9) in `docs/security-report.html`:
+   - nginx serves the app and proxies `/api` on one origin, so the Lax cookie keeps working;
+   - HTTPS;
+   - `NODE_ENV=production`, a new 48+ character `SESSION_SECRET`, `TRUST_PROXY=1`;
+   - MongoDB locked down;
+   - a non-root container;
+   - backups (DB, uploads, `DVR_SECRET`);
+   - firewall.
+   Open decisions: Atlas or a Mongo container; a private repo; whether users may delete their own account.
+3. Optional: remove the duplicate `/auth/reg` route, the unused `server/environment/Auth_ENV.js` and `JWT_SECRET`
+   (owner handles these), and the test accounts in the real DB.

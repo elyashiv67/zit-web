@@ -8,6 +8,14 @@ const ID_RE = /^\d{1,9}$/;
 // people type phones and IDs with spaces or dashes (052-123 4567); the server takes digits only
 export const onlyDigits = text => text.replace(/[\s-]/g, '');
 
+// 8+ characters, at most 72 bytes: the server's bcrypt reads only 72 bytes, and a Hebrew letter is 2
+const MAX_PASSWORD_BYTES = 72;
+function passwordError(password) {
+    if (password.length < 8) return 'לפחות 8 תווים';
+    if (new TextEncoder().encode(password).length > MAX_PASSWORD_BYTES) return 'ארוכה מדי (עד 36 אותיות בעברית או 72 באנגלית)';
+    return undefined;
+}
+
 export function validatePin(form) {
     const errors = {};
     const name = form.name.trim();
@@ -37,7 +45,7 @@ export function validateUser(form, {requirePassword = false} = {}) {
     const has = key => key in form;
     if (has('name') && !form.name.trim()) errors.name = 'צריך למלא שם';
     if (has('user_name') && !form.user_name.trim()) errors.user_name = 'צריך למלא שם משתמש';
-    if (requirePassword && form.pass.length < 6) errors.pass = 'לפחות 6 תווים';
+    if (requirePassword && passwordError(form.pass)) errors.pass = passwordError(form.pass);
     if (has('TZ') && !form.TZ.trim()) errors.TZ = 'צריך למלא תעודת זהות';
     if (has('police_id') && !form.police_id.trim()) errors.police_id = 'צריך למלא מספר אישי';
     if (has('phone') && !PHONE_RE.test(form.phone)) errors.phone = 'עד 10 ספרות, בלי מקפים';
@@ -51,8 +59,7 @@ export function validateUser(form, {requirePassword = false} = {}) {
 export function validatePasswordChange({current, next, confirm}, {needCurrent = true} = {}) {
     const errors = {};
     if (needCurrent && !current) errors.current = 'צריך למלא את הסיסמה הנוכחית';
-    if (next.length < 6) errors.next = 'לפחות 6 תווים';
-    else if (next.length > 100) errors.next = 'עד 100 תווים';
+    if (passwordError(next)) errors.next = passwordError(next);
     if (confirm !== next) errors.confirm = 'הסיסמאות לא זהות';
     return errors;
 }

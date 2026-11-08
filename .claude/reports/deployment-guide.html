@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ZitWeb Deployment Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap">
+<style>
+:root {
+    --red: #D54845; --brown: #704A42; --slate: #3E4D53; --steel: #A6A9B1; --paper: #F5F6F6; --ink: #050510;
+    --bg: #ECEDEF; --fg: #14161c; --muted: #4a5257; --card: #ffffff; --line: #d4d6da;
+    --band: var(--slate); --band-fg: var(--paper);
+    --ok: #2f7a4a; --warn: #8a5a12; --bad: #b8322f; --accent-text: #b8322f;
+    --ok-bg: #e3f1e8; --warn-bg: #f7ecd9; --bad-bg: #f8e1e0; --info-bg: #e4e8ea;
+    --font: 'Heebo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #0b0c14; --fg: #eceef0; --muted: #b3b8bd; --card: #171a22; --line: #2b3038;
+        --band: #26333a; --ok: #7fd09c; --warn: #f0c27a; --bad: #ff8c89; --accent-text: #ff8c89;
+        --ok-bg: #16281e; --warn-bg: #2d2414; --bad-bg: #32191a; --info-bg: #1e252a;
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --bg: #0b0c14; --fg: #eceef0; --muted: #b3b8bd; --card: #171a22; --line: #2b3038;
+    --band: #26333a; --ok: #7fd09c; --warn: #f0c27a; --bad: #ff8c89; --accent-text: #ff8c89;
+    --ok-bg: #16281e; --warn-bg: #2d2414; --bad-bg: #32191a; --info-bg: #1e252a;
+    color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 900px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; }
+h1, h2, h3, h4 { line-height: 1.25; text-wrap: balance; margin: 0; }
+p { margin: 0; max-width: 72ch; }
+code { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 0.88em; background: color-mix(in srgb, var(--steel) 22%, transparent); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+pre { margin: 0; background: var(--ink); color: #e6e8ea; border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 13.5px; line-height: 1.55; }
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; overflow-wrap: normal; }
+pre .c { color: #8e9aa3; }
+a { color: var(--accent-text); }
+ul, ol { margin: 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 6px; }
+
+.band { background: var(--band); color: var(--band-fg); }
+.band .wrap { padding-block: 40px 36px; display: flex; flex-direction: column; gap: 22px; }
+.kicker { display: flex; align-items: center; gap: 10px; font-weight: 500; opacity: 0.9; }
+.kicker::before { content: ""; width: 28px; height: 2px; background: var(--red); box-shadow: 0 0 10px rgba(213, 72, 69, 0.6); }
+.band h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 800; }
+.band .lede { font-size: 18px; opacity: 0.94; max-width: 70ch; }
+.results { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.result { background: rgba(5, 5, 16, 0.35); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.result b { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.result span { font-size: 14px; opacity: 0.9; }
+
+main.wrap { display: flex; flex-direction: column; gap: 48px; padding-top: 40px; }
+section { display: flex; flex-direction: column; gap: 14px; }
+section > h2 { font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+section > h2::before { content: ""; width: 4px; height: 22px; border-radius: 2px; background: var(--red); flex-shrink: 0; }
+.muted { color: var(--muted); }
+
+.note { background: var(--card); border: 1px solid var(--line); border-inline-start: 5px solid var(--warn); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.note.info { border-inline-start-color: var(--slate); }
+.note.bad { border-inline-start-color: var(--bad); }
+
+.toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 18px; font-size: 15px; margin: 0; padding-inline-start: 22px; }
+
+.step { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.step-head { display: flex; gap: 14px; align-items: flex-start; }
+.num { flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; background: var(--slate); color: var(--paper); font-weight: 800; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+.step-head h3 { font-size: 20px; font-weight: 800; }
+.step-head p { color: var(--muted); font-size: 15px; }
+.where { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--info-bg); color: var(--muted); margin-inline-start: 6px; vertical-align: middle; }
+.verify { background: var(--ok-bg); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.verify h4 { font-size: 15px; color: var(--ok); }
+.pitfall { background: var(--warn-bg); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.pitfall h4 { font-size: 15px; color: var(--warn); }
+.opt { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.opt h4 { font-size: 16px; }
+
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; flex: 1 1 150px; display: flex; flex-direction: column; gap: 2px; }
+.box b { font-size: 15px; }
+.box span { font-size: 13.5px; color: var(--muted); }
+.arrow { align-self: center; color: var(--muted); font-weight: 700; }
+@media (max-width: 640px) { .arrow { transform: rotate(90deg); width: 100%; text-align: center; } }
+
+.table-box { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 700; font-size: 14px; color: var(--muted); }
+tr:last-child td { border-bottom: none; }
+
+details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+details > summary { cursor: pointer; font-weight: 700; }
+details > summary code { font-weight: 700; }
+details[open] > summary { margin-bottom: 12px; }
+details > div { display: flex; flex-direction: column; gap: 10px; }
+footer { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="band">
+    <div class="wrap">
+        <div class="kicker">ZitWeb · deployment guide · 2026-11-08</div>
+        <h1>Going live on a private server with Docker</h1>
+        <p class="lede">Every step from an empty Ubuntu server to the app running over HTTPS, with commands, a check after each step, and the full config files in the appendix. It covers the open must-do items (M1–M9) from <code>docs/security-report.html</code>; every code-level item there is already fixed and tested.</p>
+        <div class="results">
+            <div class="result"><b>13</b><span>steps</span></div>
+            <div class="result"><b>9</b><span>new files in the repo</span></div>
+            <div class="result"><b>3</b><span>containers: web, api, mongo</span></div>
+            <div class="result"><b>2</b><span>open ports: 80, 443 (+22 SSH)</span></div>
+            <div class="result"><b>≈ ½ day</b><span>first time, end to end</span></div>
+        </div>
+    </div>
+</header>
+
+<main class="wrap">
+
+<section>
+    <h2>Read first</h2>
+    <div class="note bad">
+        <p><b>The config files below have not been run yet.</b> Docker isn't installed on the development PC, so they couldn't be tested. Every value in them was checked against the code (ports, paths, env names, the <code>/zit-web/</code> base, the <code>/api</code> prefix, sharp's Linux binary in the lock file), and each step ends with a check that catches mistakes right away. Expect one or two small fixes on the first real run.</p>
+    </div>
+    <div class="note info">
+        <p><b>Compared with your <code>docker-try</code> branch</b> (an earlier attempt before the frontend existed), this setup:</p>
+        <ul>
+            <li>adds <b>nginx</b>, which serves the React app, handles HTTPS, and passes <code>/api</code> to Node;</li>
+            <li>no longer publishes port <code>4586</code> (the API is reachable only through nginx);</li>
+            <li>gives <b>Mongo a password</b> and an app user that can only use the <code>Zit</code> database;</li>
+            <li>runs Node <b>as a non-root user</b> on Node 24, the same version as your PC;</li>
+            <li>stores pin photos on a <b>volume</b>, so they survive rebuilds;</li>
+            <li>adds health checks;</li>
+            <li>no longer needs <code>environment/</code> on the server: nothing imports it anymore.</li>
+        </ul>
+    </div>
+    <div class="note">
+        <p><b>Placeholders used below:</b> <code>zit.example.org</code> = your domain · <code>SERVER_IP</code> = the server's address · <code>deploy</code> = the Linux user you work as · <code>/srv/zit</code> = where the code lives on the server. Replace them everywhere.</p>
+        <p><b>This file is in <code>.claude/reports/</code>, which git tracks, and the repo is public.</b> It has no secrets, real names or addresses, and it should stay that way: never paste real passwords, connection strings or your real domain into it.</p>
+    </div>
+</section>
+
+<section>
+    <h2>What it looks like</h2>
+    <div class="flow" aria-label="Request flow">
+        <div class="box"><b>Phone / PC</b><span>https://zit.example.org/zit-web/</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="box"><b>web</b> · nginx<span>ports 80 → 443 · TLS · serves the React build · <code>/api/*</code> → api</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="box"><b>api</b> · Node 24<span>port 4586, internal only · photos on the <code>uploads</code> volume</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="box"><b>mongo</b> · MongoDB 8<span>port 27017, internal only · <code>mongo-data</code> volume · password required</span></div>
+    </div>
+    <p class="muted">Everything is on one domain, so the login cookie stays <code>SameSite=Lax</code> and no CORS is needed. The browser calls <code>/api/...</code>; nginx removes <code>/api</code> before passing the request on, because the server's routes have no <code>/api</code> prefix (Vite does the same thing in development).</p>
+</section>
+
+<section>
+    <h2>Decide before you start</h2>
+    <div class="table-box">
+        <table>
+            <thead><tr><th>Decision</th><th>Options</th><th>Recommendation</th></tr></thead>
+            <tbody>
+                <tr><td><b>Where MongoDB runs</b></td><td><b>B:</b> a container on the server (what <code>docker-try</code> did) · <b>A:</b> stay on Atlas</td><td><b>B</b>: the data stays on your server, nothing depends on Atlas, and you control backups. This guide follows B; Atlas differences are marked <span class="where">Option A</span>.</td></tr>
+                <tr><td><b>How phones reach the server</b></td><td>A public domain name · only an internal network / VPN</td><td>Phones need a certificate they trust. A domain you own plus Let's Encrypt is the easiest (step 7). Internal-only also works with Let's Encrypt's DNS challenge or your organization's own CA. Self-signed certificates mean installing them on every phone, so avoid them.</td></tr>
+                <tr><td><b>The server</b></td><td>Any Linux VM or machine</td><td>Ubuntu 24.04 LTS, 2 vCPU, <b>4 GB RAM</b> (Node is capped at 1 GB, Mongo ~1 GB), 40 GB+ disk. Photos are ≤ 5 MB each, usually 0.5–2 MB, and a pin holds up to 10.</td></tr>
+                <tr><td><b>GitHub repo</b></td><td>Public · private</td><td>Private is better (security report F2). If private, the server pulls with a <b>deploy key</b> (step 4).</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section>
+    <h2>Steps</h2>
+    <ol class="toc">
+        <li><a href="#s1">Prepare and secure the server</a></li>
+        <li><a href="#s2">Install Docker</a></li>
+        <li><a href="#s3">Add the deploy files to the repo</a></li>
+        <li><a href="#s4">Get the code onto the server</a></li>
+        <li><a href="#s5">Create the secrets</a></li>
+        <li><a href="#s6">Point the domain at the server</a></li>
+        <li><a href="#s7">Get the HTTPS certificate</a></li>
+        <li><a href="#s8">Start the database and move the data</a></li>
+        <li><a href="#s9">Build and start everything</a></li>
+        <li><a href="#s10">Check it end to end</a></li>
+        <li><a href="#s11">Clean up the data</a></li>
+        <li><a href="#s12">Backups (and a test restore)</a></li>
+        <li><a href="#s13">Retire GitHub Pages and keep it running</a></li>
+    </ol>
+</section>
+
+<!-- ============================== STEP 1 ============================== -->
+<section id="s1">
+<div class="step">
+    <div class="step-head"><div class="num">1</div><div><h3>Prepare and secure the server <span class="where">server</span></h3><p>A user for you, SSH by key only, a firewall, and automatic security updates.</p></div></div>
+<pre><code><span class="c"># as root (or the first user the provider gave you)</span>
+adduser deploy
+usermod -aG sudo deploy
+
+<span class="c"># on YOUR PC: copy your SSH key to the server, then log in as deploy</span>
+ssh-copy-id deploy@SERVER_IP
+ssh deploy@SERVER_IP
+
+<span class="c"># key-only SSH, no root login</span>
+sudo tee /etc/ssh/sshd_config.d/99-zit.conf &gt;/dev/null &lt;&lt;'EOF'
+PasswordAuthentication no
+PermitRootLogin no
+EOF
+sudo systemctl restart ssh
+
+<span class="c"># updates, time zone, firewall</span>
+sudo apt update &amp;&amp; sudo apt full-upgrade -y
+sudo apt install -y unattended-upgrades ufw
+sudo dpkg-reconfigure -plow unattended-upgrades     <span class="c"># answer Yes</span>
+sudo timedatectl set-timezone Asia/Jerusalem
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable</code></pre>
+    <div class="verify"><h4>Check</h4>
+        <ul>
+            <li><b>Keep your current SSH window open</b> and log in from a second window: <code>ssh deploy@SERVER_IP</code> should work with your key, and <code>ssh root@SERVER_IP</code> should be refused.</li>
+            <li><code>sudo ufw status</code> shows only OpenSSH, 80 and 443.</li>
+        </ul>
+    </div>
+</div>
+</section>
+
+<!-- ============================== STEP 2 ============================== -->
+<section id="s2">
+<div class="step">
+    <div class="step-head"><div class="num">2</div><div><h3>Install Docker <span class="where">server</span></h3><p>From Docker's own apt repository (Ubuntu's <code>docker.io</code> package lags behind), with log rotation turned on for every container.</p></div></div>
+<pre><code>sudo apt install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release &amp;&amp; echo $VERSION_CODENAME) stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list &gt;/dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+<span class="c"># rotate container logs (10 MB × 5 files each), so logs can't fill the disk</span>
+sudo tee /etc/docker/daemon.json &gt;/dev/null &lt;&lt;'EOF'
+{ "log-driver": "json-file", "log-opts": { "max-size": "10m", "max-file": "5" } }
+EOF
+sudo systemctl restart docker
+
+<span class="c"># run docker without sudo (log out and back in afterwards)</span>
+sudo usermod -aG docker deploy</code></pre>
+    <div class="verify"><h4>Check</h4><ul><li><code>docker run --rm hello-world</code> prints "Hello from Docker!".</li><li><code>docker compose version</code> prints v2.x.</li></ul></div>
+    <div class="pitfall"><h4>Good to know</h4>
+        <ul>
+            <li><b>Ports that Docker publishes skip <code>ufw</code>.</b> Only <code>web</code> publishes ports (80/443). Never add a <code>ports:</code> line to <code>api</code> or <code>mongo</code> expecting the firewall to block it; it won't.</li>
+            <li>Being in the <code>docker</code> group is equivalent to root. Keep it to the <code>deploy</code> user.</li>
+        </ul>
+    </div>
+</div>
+</section>
+
+<!-- ============================== STEP 3 ============================== -->
+<section id="s3">
+<div class="step">
+    <div class="step-head"><div class="num">3</div><div><h3>Add the deploy files to the repo <span class="where">your PC</span></h3><p>Nine small files (full contents in the <a href="#files">appendix</a>). Commit them on a branch, merge to <code>main</code>, and tag the release, e.g. <code>v1.0.0</code>.</p></div></div>
+    <div class="table-box">
+        <table>
+            <thead><tr><th>File</th><th>What it does</th><th>In git?</th></tr></thead>
+            <tbody>
+                <tr><td><code>docker-compose.yml</code> (repo root)</td><td>The three containers, volumes, health checks</td><td>yes</td></tr>
+                <tr><td><code>server/Dockerfile</code></td><td>The API image: Node 24, production packages only, runs as <code>node</code></td><td>yes</td></tr>
+                <tr><td><code>server/.dockerignore</code></td><td>Keeps <code>.env</code>, <code>uploads/</code>, tests, etc. out of the image</td><td>yes</td></tr>
+                <tr><td><code>react/Dockerfile</code></td><td>Builds the React app, then puts the result into an nginx image</td><td>yes</td></tr>
+                <tr><td><code>react/.dockerignore</code></td><td>Keeps <code>node_modules</code>, <code>dist</code> and the logo packs out</td><td>yes</td></tr>
+                <tr><td><code>deploy/nginx.conf.template</code></td><td>HTTPS, security headers, the <code>/api</code> proxy, the upload size</td><td>yes</td></tr>
+                <tr><td><code>deploy/mongo-init.js</code></td><td>Creates the app's database user on the first start</td><td>yes</td></tr>
+                <tr><td><code>deploy/backup.sh</code></td><td>Nightly database and photo backup</td><td>yes</td></tr>
+                <tr><td><code>deploy/*.env.example</code> + root <code>.env.example</code></td><td>Templates for the secrets (no values)</td><td>yes</td></tr>
+                <tr><td><code>deploy/api.env</code>, <code>deploy/mongo.env</code>, <code>.env</code></td><td>The real secrets, created on the server only (step 5)</td><td><b>never</b></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p>Add these lines to the root <code>.gitignore</code> so the real secret files can never be committed:</p>
+<pre><code>/.env
+deploy/*.env
+!deploy/*.env.example</code></pre>
+    <div class="verify"><h4>Check</h4><ul><li><code>git status</code> after creating a test <code>deploy/api.env</code> doesn't list it.</li><li>Server and UI tests still pass. Nothing in the app code changes.</li></ul></div>
+</div>
+</section>
+
+<!-- ============================== STEP 4 ============================== -->
+<section id="s4">
+<div class="step">
+    <div class="step-head"><div class="num">4</div><div><h3>Get the code onto the server <span class="where">server</span></h3><p>The server pulls from GitHub. It never needs your <code>.env</code>, <code>environment/</code> or <code>node_modules</code>.</p></div></div>
+<pre><code>sudo mkdir -p /srv/zit &amp;&amp; sudo chown deploy: /srv/zit
+git clone https://github.com/elyashiv67/zit-web.git /srv/zit
+cd /srv/zit
+git checkout v1.0.0          <span class="c"># the tag from step 3</span></code></pre>
+    <div class="opt"><h4>If the repo is private</h4>
+        <p>Create a read-only <b>deploy key</b> on the server and add it under GitHub → repo → Settings → Deploy keys (leave "write access" off). Then clone with the SSH URL:</p>
+<pre><code>ssh-keygen -t ed25519 -f ~/.ssh/zit_deploy -N ""
+cat ~/.ssh/zit_deploy.pub          <span class="c"># paste into GitHub → Deploy keys</span>
+printf 'Host github.com\n  IdentityFile ~/.ssh/zit_deploy\n' &gt;&gt; ~/.ssh/config
+git clone git@github.com:elyashiv67/zit-web.git /srv/zit</code></pre>
+    </div>
+    <div class="verify"><h4>Check</h4><ul><li><code>ls /srv/zit</code> shows <code>server/</code>, <code>react/</code>, <code>deploy/</code>, <code>docker-compose.yml</code>.</li></ul></div>
+</div>
+</section>
+
+<!-- ============================== STEP 5 ============================== -->
+<section id="s5">
+<div class="step">
+    <div class="step-head"><div class="num">5</div><div><h3>Create the secrets <span class="where">server</span></h3><p>Three files, readable only by you. Use <code>openssl rand -hex</code> for database passwords: hex characters never need escaping in a connection string.</p></div></div>
+<pre><code>cd /srv/zit
+cp .env.example .env                       <span class="c"># DOMAIN=zit.example.org</span>
+cp deploy/api.env.example deploy/api.env
+cp deploy/mongo.env.example deploy/mongo.env
+chmod 600 .env deploy/api.env deploy/mongo.env
+
+openssl rand -base64 48     <span class="c"># → SESSION_SECRET in deploy/api.env (new; never reuse the dev one)</span>
+openssl rand -hex 24        <span class="c"># → MONGO_INITDB_ROOT_PASSWORD in deploy/mongo.env</span>
+openssl rand -hex 24        <span class="c"># → ZIT_APP_PASSWORD in deploy/mongo.env, AND inside DB= in deploy/api.env</span>
+nano deploy/api.env  &amp;&amp;  nano deploy/mongo.env  &amp;&amp;  nano .env</code></pre>
+    <div class="pitfall"><h4>DVR_SECRET: copy it, don't create a new one</h4>
+        <p>The DVR passwords already in the database are encrypted with the <code>DVR_SECRET</code> from your current <code>server/.env</code>. Copy that exact value into <code>deploy/api.env</code>. A new value makes every stored DVR password unreadable. Also store a copy offline (a password manager, or paper in a safe), <b>separate from the backups</b>.</p>
+    </div>
+    <div class="verify"><h4>Check</h4><ul><li><code>ls -l .env deploy/*.env</code> shows <code>-rw-------</code>.</li><li>No placeholder text is left: <code>grep -n '&lt;' .env deploy/*.env</code> prints nothing.</li></ul></div>
+</div>
+</section>
+
+<!-- ============================== STEP 6 ============================== -->
+<section id="s6">
+<div class="step">
+    <div class="step-head"><div class="num">6</div><div><h3>Point the domain at the server <span class="where">DNS provider</span></h3><p>An <code>A</code> record from <code>zit.example.org</code> to <code>SERVER_IP</code>. DNS changes can take a while to spread, so do this early.</p></div></div>
+    <div class="verify"><h4>Check</h4><ul><li><code>dig +short zit.example.org</code> (or <code>nslookup</code>) returns <code>SERVER_IP</code>.</li></ul></div>
+    <div class="opt"><h4>Internal network only (no public DNS)</h4><p>Use your organization's internal DNS and certificate authority, and change the two <code>ssl_certificate</code> paths in the nginx template to those files. Or, if you own a public domain, Let's Encrypt's DNS challenge (<code>certbot</code> with your DNS provider's plugin) issues a trusted certificate without the server being reachable from the internet. Skip step 7 in either case.</p></div>
+</div>
+</section>
+
+<!-- ============================== STEP 7 ============================== -->
+<section id="s7">
+<div class="step">
+    <div class="step-head"><div class="num">7</div><div><h3>Get the HTTPS certificate <span class="where">server</span></h3><p>Let's Encrypt, free, renewed automatically. Get it <b>before</b> starting the containers: nginx won't start without the certificate files.</p></div></div>
+<pre><code>sudo apt install -y certbot
+sudo certbot certonly --standalone -d zit.example.org -m you@example.org --agree-tos --no-eff-email
+
+<span class="c"># renewals: certbot needs port 80 for a few seconds, so stop nginx around it</span>
+sudo tee /etc/letsencrypt/renewal-hooks/pre/zit.sh &gt;/dev/null &lt;&lt;'EOF'
+#!/bin/sh
+cd /srv/zit &amp;&amp; docker compose stop web
+EOF
+sudo tee /etc/letsencrypt/renewal-hooks/post/zit.sh &gt;/dev/null &lt;&lt;'EOF'
+#!/bin/sh
+cd /srv/zit &amp;&amp; docker compose start web
+EOF
+sudo chmod +x /etc/letsencrypt/renewal-hooks/pre/zit.sh /etc/letsencrypt/renewal-hooks/post/zit.sh</code></pre>
+    <div class="verify"><h4>Check</h4><ul><li><code>sudo ls /etc/letsencrypt/live/zit.example.org/</code> shows <code>fullchain.pem</code> and <code>privkey.pem</code>.</li><li>After step 9: <code>sudo certbot renew --dry-run</code> succeeds. The site goes down for a few seconds during it, which is expected.</li></ul></div>
+</div>
+</section>
+
+<!-- ============================== STEP 8 ============================== -->
+<section id="s8">
+<div class="step">
+    <div class="step-head"><div class="num">8</div><div><h3>Start the database and move the data <span class="where">server</span></h3><p>Start Mongo alone, copy the current data into it, then copy the pin photos. Login sessions are not copied: everyone logs in once on the new server, which is expected because the session secret is new.</p></div></div>
+<pre><code>cd /srv/zit
+docker compose up -d mongo
+docker compose ps                      <span class="c"># wait until mongo is "healthy"</span>
+
+<span class="c"># 1) database: Atlas → the new Mongo. In Atlas → Network Access, temporarily allow SERVER_IP.</span>
+read -rs ATLAS_URI                     <span class="c"># paste the Atlas connection string (not saved in shell history)</span>
+docker run --rm mongo:8.0 mongodump --uri "$ATLAS_URI" --db Zit --excludeCollection sessions --archive --gzip &gt; /tmp/zit.archive.gz
+docker compose exec -T mongo sh -c 'mongorestore -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip' &lt; /tmp/zit.archive.gz
+shred -u /tmp/zit.archive.gz; unset ATLAS_URI
+
+<span class="c"># 2) photos: from the machine the server runs on today (its server/uploads/pins folder)</span>
+<span class="c">#    on that machine:  scp -r server/uploads/pins deploy@SERVER_IP:/tmp/pins</span>
+docker compose up -d api               <span class="c"># creates the uploads volume</span>
+docker compose cp /tmp/pins api:/data/uploads/
+docker compose exec -u root api chown -R node:node /data/uploads
+rm -rf /tmp/pins</code></pre>
+    <div class="opt"><h4><span class="where">Option A</span> staying on Atlas</h4>
+        <ul>
+            <li>Delete the <code>mongo</code> service and the <code>mongo-data</code> volume from <code>docker-compose.yml</code>, and the <code>depends_on: mongo</code> lines from <code>api</code>.</li>
+            <li>In Atlas → Network Access, allow <b>only</b> <code>SERVER_IP</code>, and remove <code>0.0.0.0/0</code> if it's there.</li>
+            <li>In Atlas → Database Access, create a user with <code>readWrite</code> on <code>Zit</code> only, and put its connection string in <code>DB=</code>.</li>
+            <li>The free Atlas tier (M0) has <b>no backups</b>, so step 12's script backs it up for you.</li>
+            <li>Only the photos need to be copied.</li>
+        </ul>
+    </div>
+    <div class="verify"><h4>Check</h4>
+<pre><code>docker compose exec mongo sh -c 'mongosh -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --quiet --eval "
+  const z = db.getSiblingDB(\"Zit\");
+  printjson({users: z.users.countDocuments(), pins: z.pins.countDocuments(), units: z.units.countDocuments(), roles: z.roles.countDocuments()})"'
+docker compose exec api sh -c 'ls /data/uploads/pins | wc -l'    <span class="c"># = number of pins that have photos</span></code></pre>
+        <p>The counts should match Atlas. Then remove <code>SERVER_IP</code> from Atlas's network access if you're leaving Atlas.</p>
+    </div>
+</div>
+</section>
+
+<!-- ============================== STEP 9 ============================== -->
+<section id="s9">
+<div class="step">
+    <div class="step-head"><div class="num">9</div><div><h3>Build and start everything <span class="where">server</span></h3><p>The first build takes a few minutes: it installs packages and builds the React app.</p></div></div>
+<pre><code>cd /srv/zit
+docker compose build
+docker compose up -d
+docker compose ps                     <span class="c"># all three "running", api and mongo "healthy"</span>
+docker compose logs -f api            <span class="c"># Ctrl+C to stop following</span></code></pre>
+    <div class="verify"><h4>Check</h4><ul><li>The API log shows <code>MongoDB connected (Zit)</code> and <code>Server is running on port 4586</code>, with no warning about <code>SESSION_SECRET</code> or <code>TRUST_PROXY</code>.</li><li>If <code>api</code> keeps restarting, see <a href="#trouble">Troubleshooting</a>. The first log lines name the bad setting without printing its value.</li></ul></div>
+</div>
+</section>
+
+<!-- ============================== STEP 10 ============================== -->
+<section id="s10">
+<div class="step">
+    <div class="step-head"><div class="num">10</div><div><h3>Check it end to end <span class="where">server + phone</span></h3><p>Proof that HTTPS, headers, the proxy, cookies and closed ports all work, before real users arrive.</p></div></div>
+<pre><code>curl -sI http://zit.example.org | head -3            <span class="c"># 301 → https</span>
+curl -s https://zit.example.org/api/health            <span class="c"># {"status":"ok"}</span>
+curl -sI https://zit.example.org/zit-web/ | grep -iE 'strict-transport|content-security|x-content-type'
+curl -sI https://zit.example.org/zit-web/pins | head -1   <span class="c"># 200 (a page refresh inside the app works)</span>
+
+<span class="c"># from ANOTHER machine: only 22, 80 and 443 may be open</span>
+nmap -Pn -p 22,80,443,4586,27017 zit.example.org</code></pre>
+    <div class="verify"><h4>Check on a phone, over mobile data (not Wi-Fi)</h4>
+        <ul>
+            <li>Open <code>https://zit.example.org</code>. It redirects to <code>/zit-web/</code> with a lock icon and no certificate warning.</li>
+            <li>Log in, then open the pins page: the map tiles appear.</li>
+            <li>Open a pin and reveal its DVR password. If it shows correctly, <code>DVR_SECRET</code> is right.</li>
+            <li>Upload a photo, then open it.</li>
+            <li>Refresh the page: you stay logged in.</li>
+            <li>Log out, then press Back: you get the login page, not data.</li>
+            <li>On a PC (DevTools → Application → Cookies): <code>zit.sid</code> is <b>HttpOnly</b>, <b>Secure</b> and <b>SameSite=Lax</b>.</li>
+        </ul>
+    </div>
+</div>
+</section>
+
+<!-- ============================== STEP 11 ============================== -->
+<section id="s11">
+<div class="step">
+    <div class="step-head"><div class="num">11</div><div><h3>Clean up the data <span class="where">the app (admin)</span></h3><p>Leftovers from development.</p></div></div>
+    <ul>
+        <li>In <b>ניהול → משתמשים</b>, delete the test accounts created during development (security report M6).</li>
+        <li>Give the admin a long password (12+ characters). New passwords must be at least 8 characters.</li>
+        <li>Nothing to do for older passwords: each user's stored hash is upgraded to the stronger setting (bcrypt cost 12) automatically at their next login.</li>
+    </ul>
+    <div class="verify"><h4>Check</h4><ul><li>The users list shows only real people, and at least one admin. The server won't let you remove the last admin.</li></ul></div>
+</div>
+</section>
+
+<!-- ============================== STEP 12 ============================== -->
+<section id="s12">
+<div class="step">
+    <div class="step-head"><div class="num">12</div><div><h3>Backups (and a test restore) <span class="where">server</span></h3><p>A nightly copy of the database and the photos, kept for 14 days. Copy them off the server too: a backup on the same disk doesn't survive losing that disk.</p></div></div>
+<pre><code>chmod +x /srv/zit/deploy/backup.sh
+sudo /srv/zit/deploy/backup.sh &amp;&amp; ls -lh /srv/zit-backups     <span class="c"># run once by hand</span>
+sudo crontab -e
+<span class="c"># add this line: every night at 02:30</span>
+30 2 * * * /srv/zit/deploy/backup.sh &gt;&gt; /var/log/zit-backup.log 2&gt;&amp;1</code></pre>
+    <p><b>Test a restore once now, and then every few months.</b> This loads the backup into a separate database, so the live data isn't touched:</p>
+<pre><code>cd /srv/zit
+docker compose exec -T mongo sh -c 'mongorestore -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip --nsFrom "Zit.*" --nsTo "ZitRestoreTest.*"' &lt; /srv/zit-backups/db-YYYY-MM-DD.archive.gz
+<span class="c"># compare counts with step 8's check (use "ZitRestoreTest"), then remove the copy:</span>
+docker compose exec mongo sh -c 'mongosh -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --quiet --eval "db.getSiblingDB(\"ZitRestoreTest\").dropDatabase()"'
+tar tzf /srv/zit-backups/uploads-YYYY-MM-DD.tgz | head      <span class="c"># the photos are in the archive</span></code></pre>
+    <div class="pitfall"><h4>Off-server copy</h4><p>Copy <code>/srv/zit-backups</code> to another machine every night (<code>rsync</code> over SSH, or an encrypted cloud bucket). The backups contain personal data and the encrypted DVR passwords: keep them only where the app's data may be. Keep <code>DVR_SECRET</code> somewhere else; together with a backup, it can read every DVR password.</p></div>
+</div>
+</section>
+
+<!-- ============================== STEP 13 ============================== -->
+<section id="s13">
+<div class="step">
+    <div class="step-head"><div class="num">13</div><div><h3>Retire GitHub Pages and keep it running <span class="where">GitHub + server</span></h3><p>The old public copy of the app goes away; then the routine for updates.</p></div></div>
+    <ul>
+        <li><b>GitHub Pages:</b> repo → Settings → Pages → unpublish, then delete the <code>gh-pages</code> branch. That old build is still public there. Afterwards the <code>predeploy</code>/<code>deploy</code> scripts and <code>public/404.html</code> can go; Claude can make that small code change.</li>
+        <li><b>Deploying a new version:</b>
+<pre><code>cd /srv/zit
+git fetch --tags &amp;&amp; git checkout v1.1.0
+docker compose build &amp;&amp; docker compose up -d
+docker compose ps</code></pre>
+            Run the tests on your PC before tagging. Users may need to refresh once; <code>index.html</code> is never cached, so they get the new version.</li>
+        <li><b>Rolling back:</b> <code>git checkout v1.0.0 &amp;&amp; docker compose build &amp;&amp; docker compose up -d</code>. The data is untouched: the app has no database migrations.</li>
+        <li><b>Monthly:</b> run <code>npm audit</code> on your PC (<code>server/</code> and <code>react/</code>), and update the base images with <code>docker compose build --pull</code>. Check disk space (<code>df -h</code>, <code>docker system df</code>) and the backup log, and delete old images with <code>docker image prune</code>.</li>
+        <li><b>Monitoring:</b> a cron job or an uptime service polling <code>https://zit.example.org/api/health</code> (it only says whether the DB is up). Certificates renew automatically; <code>sudo certbot certificates</code> shows the expiry date.</li>
+    </ul>
+</div>
+</section>
+
+<section id="trouble">
+    <h2>Troubleshooting</h2>
+    <div class="table-box">
+        <table>
+            <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+            <tbody>
+                <tr><td>Login "works" but you're immediately back at the login page</td><td>The cookie isn't kept: <code>TRUST_PROXY</code> isn't <code>1</code>, or the site was opened over http</td><td><code>TRUST_PROXY=1</code> in <code>api.env</code>; use https only</td></tr>
+                <tr><td><code>api</code> keeps restarting</td><td>A bad env setting (the log names it), or the DB is unreachable</td><td><code>docker compose logs api</code>; check <code>DB=</code>, the password, <code>authSource=Zit</code></td></tr>
+                <tr><td><code>MongoServerSelectionError</code></td><td><span class="where">B</span> mongo isn't healthy / wrong host · <span class="where">A</span> Atlas doesn't allow <code>SERVER_IP</code></td><td>The host must be <code>mongo</code>; check Atlas Network Access</td></tr>
+                <tr><td>Mongo login fails for <code>zit_app</code></td><td><code>mongo-init.js</code> only runs on an <b>empty</b> volume</td><td>Create the user by hand with <code>mongosh</code>, or start over: <code>docker compose down</code>, <code>docker volume rm zit_mongo-data</code> (this deletes the database)</td></tr>
+                <tr><td>502 Bad Gateway</td><td>The API isn't up yet, or crashed</td><td><code>docker compose ps</code>, <code>docker compose logs api</code></td></tr>
+                <tr><td>Refreshing <code>/zit-web/pins</code> gives 404</td><td>nginx is missing <code>try_files … /zit-web/index.html</code></td><td>Check the template; <code>docker compose restart web</code></td></tr>
+                <tr><td>Photo upload fails with 413</td><td>nginx's body size limit</td><td><code>client_max_body_size 260m</code> in <code>location /api/</code></td></tr>
+                <tr><td>Map is grey, no tiles</td><td>The CSP blocks the tile server, or no referrer is sent (OSM requires one)</td><td>Keep <code>img-src … https://*.tile.openstreetmap.org</code> and <code>Referrer-Policy: strict-origin-when-cross-origin</code></td></tr>
+                <tr><td>Console warning: "Refused to execute inline script"</td><td>The GitHub Pages redirect snippet in <code>index.html</code>, blocked by the CSP</td><td>Harmless. It goes away when the GitHub Pages leftovers are removed (step 13)</td></tr>
+                <tr><td>DVR password won't show, or the server logs a decrypt error</td><td><code>DVR_SECRET</code> differs from the one the data was encrypted with</td><td>Put back the original value from your old <code>server/.env</code></td></tr>
+                <tr><td>Old pins have no photos</td><td><code>uploads/pins</code> wasn't copied, or belongs to root</td><td>Step 8, part 2 (copy, then <code>chown</code>)</td></tr>
+                <tr><td>"Failed to fetch dynamically imported module" after an update</td><td>A browser still has the old <code>index.html</code></td><td>Refresh once. <code>index.html</code> is sent with <code>no-cache</code>, so this shouldn't repeat</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section id="files">
+    <h2>Appendix: the files</h2>
+    <p class="muted">Copy them as they are; only the placeholders in the <code>.example</code> files change, and only on the server.</p>
+
+    <details>
+        <summary><code>docker-compose.yml</code> (repo root)</summary>
+        <div>
+<pre><code><span class="c"># ZitWeb: nginx (web) → Node API (api) → MongoDB (mongo). Only "web" is reachable from outside.</span>
+name: zit
+
+services:
+  web:
+    build: ./react
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in the .env file next to this one}
+    volumes:
+      - ./deploy/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build: ./server
+    env_file: ./deploy/api.env
+    volumes:
+      - uploads:/data/uploads
+    init: true                 <span class="c"># proper signal handling / zombie reaping for node as PID 1</span>
+    mem_limit: 1g              <span class="c"># photo compression peaks around 600MB</span>
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4586/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:                <span class="c"># Option A (Atlas): delete these 3 lines</span>
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  <span class="c"># Option A (Atlas): delete this whole service and the mongo-data volume below</span>
+  mongo:
+    image: mongo:8.0
+    env_file: ./deploy/mongo.env
+    volumes:
+      - mongo-data:/data/db
+      - ./deploy/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    <span class="c"># no "ports:" on purpose: only the api container can reach the database</span>
+
+volumes:
+  uploads:
+  mongo-data:</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>server/Dockerfile</code></summary>
+        <div>
+<pre><code><span class="c"># ZitWeb API. Debian "slim" (glibc) so bcrypt and sharp use their prebuilt binaries.</span>
+FROM node:24-slim
+ENV NODE_ENV=production
+WORKDIR /app
+
+<span class="c"># packages first: this layer is reused until package*.json changes</span>
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev &amp;&amp; npm cache clean --force
+<span class="c"># fail the build here, not on the first photo upload, if sharp's Linux binary is missing</span>
+RUN node -e "require('sharp')"
+
+COPY . .
+<span class="c"># the photos volume is mounted here; owned by the unprivileged "node" user</span>
+RUN mkdir -p /data/uploads &amp;&amp; chown node:node /data/uploads
+USER node
+
+EXPOSE 4586
+CMD ["node", "index.js"]</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>server/.dockerignore</code></summary>
+        <div>
+<pre><code>node_modules
+.env
+environment
+uploads
+tests
+scripts
+postman
+DB
+*.md
+Dockerfile
+.dockerignore
+.gitignore</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>react/Dockerfile</code></summary>
+        <div>
+<pre><code><span class="c"># 1) build the React app (dev dependencies are needed for the build)</span>
+FROM node:24-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+<span class="c"># VITE_API_URL stays unset: the app calls /api on its own domain</span>
+RUN npm run build
+
+<span class="c"># 2) serve it. nginx fills in ${DOMAIN} in the mounted template at start</span>
+FROM nginx:1.27-alpine
+COPY --from=build /app/dist /usr/share/nginx/html/zit-web</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>react/.dockerignore</code></summary>
+        <div>
+<pre><code>node_modules
+dist
+assets
+Dockerfile
+.dockerignore</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>deploy/nginx.conf.template</code></summary>
+        <div>
+<pre><code><span class="c"># ${DOMAIN} is filled in from the environment when the container starts (nginx's own $variables are left alone)</span>
+
+<span class="c"># http → https</span>
+server {
+    listen 80;
+    server_name ${DOMAIN};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+    server_tokens off;
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+
+    client_max_body_size 1m;
+
+    location = / { return 302 /zit-web/; }
+
+    <span class="c"># the React app. NOTE: add_header inside a location replaces the server-level ones, so all are listed here</span>
+    location /zit-web/ {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /zit-web/index.html;
+
+        add_header Cache-Control "no-cache" always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        <span class="c"># OSM's tile servers require a referrer, so not "no-referrer"</span>
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self)" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    }
+
+    <span class="c"># the API: "/api/x" → "http://api:4586/x" (the trailing slash strips /api). helmet adds the API's headers</span>
+    location /api/ {
+        proxy_pass http://api:4586/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        <span class="c"># exactly one hop (nginx), matching TRUST_PROXY=1; the client can't fake this value</span>
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        <span class="c"># photo uploads: up to 10 × 25MB per request, phones can be slow</span>
+        client_max_body_size 260m;
+        client_body_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+    }
+}</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>deploy/mongo-init.js</code></summary>
+        <div>
+<pre><code>// Runs once, on the first start with an EMPTY mongo-data volume.
+// Creates the app's own user: read/write on the Zit database only (not root).
+db.getSiblingDB('Zit').createUser({
+    user: 'zit_app',
+    pwd: process.env.ZIT_APP_PASSWORD,
+    roles: [{role: 'readWrite', db: 'Zit'}],
+});</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>deploy/api.env.example</code>, <code>deploy/mongo.env.example</code>, <code>.env.example</code></summary>
+        <div>
+<pre><code><span class="c"># ---- deploy/api.env.example → copy to deploy/api.env on the server, chmod 600 ----</span>
+NODE_ENV=production
+PORT=4586
+<span class="c"># Option B (container). Option A: the Atlas connection string of a readWrite-on-Zit user</span>
+DB=mongodb://zit_app:&lt;ZIT_APP_PASSWORD&gt;@mongo:27017/Zit?authSource=Zit
+<span class="c"># new: openssl rand -base64 48</span>
+SESSION_SECRET=&lt;48+ random characters&gt;
+<span class="c"># COPY the existing value from server/.env; a new one makes stored DVR passwords unreadable</span>
+DVR_SECRET=&lt;existing value&gt;
+<span class="c"># nginx is the one proxy in front</span>
+TRUST_PROXY=1
+UPLOADS_DIR=/data/uploads
+<span class="c"># COOKIE_SECURE is on by default in production. No JWT_SECRET: it's no longer used</span>
+
+<span class="c"># ---- deploy/mongo.env.example → deploy/mongo.env (Option B only), chmod 600 ----</span>
+MONGO_INITDB_ROOT_USERNAME=root
+MONGO_INITDB_ROOT_PASSWORD=&lt;openssl rand -hex 24&gt;
+ZIT_APP_PASSWORD=&lt;openssl rand -hex 24, the same value as inside DB= above&gt;
+
+<span class="c"># ---- .env.example (repo root) → .env: read by docker compose itself ----</span>
+DOMAIN=zit.example.org</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>deploy/backup.sh</code></summary>
+        <div>
+<pre><code>#!/bin/sh
+# Nightly backup of the database and the pin photos, kept 14 days.
+# Run as root from cron (step 12). Copy /srv/zit-backups off the server as well.
+set -eu
+cd /srv/zit
+DIR=/srv/zit-backups
+DAY=$(date +%F)
+umask 077
+mkdir -p "$DIR"
+
+# database, without login sessions. Option B (container):
+docker compose exec -T mongo sh -c 'mongodump -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db Zit --excludeCollection sessions --archive --gzip' \
+  &gt; "$DIR/db-$DAY.archive.gz"
+# Option A (Atlas): put ATLAS_BACKUP_URI=... in /srv/zit/deploy/backup.env (chmod 600) and use instead:
+#   . /srv/zit/deploy/backup.env
+#   docker run --rm mongo:8.0 mongodump --uri "$ATLAS_BACKUP_URI" --db Zit --excludeCollection sessions --archive --gzip &gt; "$DIR/db-$DAY.archive.gz"
+
+# photos (the "uploads" volume of the "zit" compose project)
+docker run --rm -v zit_uploads:/data:ro alpine tar czf - -C /data . &gt; "$DIR/uploads-$DAY.tgz"
+
+# keep two weeks
+find "$DIR" -type f -mtime +14 -delete
+echo "$(date -Is) backup ok: $(du -sh "$DIR" | cut -f1)"</code></pre>
+        </div>
+    </details>
+</section>
+
+<footer>
+    <p>Based on the code as of 2026-11-08 (branch <code>final-tweaks</code>, after the security fixes) and the open items in <code>docs/security-report.html</code>. Checked against: <code>server/config/env.js</code> (env names and production rules), <code>server/index.js</code> (port 4586, all interfaces, graceful shutdown), <code>server/app.js</code> (<code>/health</code>, trust proxy), <code>react/vite.config.js</code> and <code>router.jsx</code> (base and basename <code>/zit-web/</code>, <code>/api</code> prefix removed), <code>api/client.js</code> (<code>/api</code> default), the lock files (Linux binaries for sharp, rollup and esbuild), and the earlier <code>docker-try</code> branch. Not run: Docker isn't installed on the development PC.</p>
+</footer>
+
+</main>
+</body>
+</html>

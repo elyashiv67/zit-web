@@ -197,7 +197,7 @@ describe('admin', () => {
         const fill = async (label, text) => userEvent.type(within(sheet).getByLabelText(label), text);
         await fill('שם מלא', 'משה');
         await fill('שם משתמש', 'moshe');
-        await fill('סיסמה ראשונית', 'secret1');
+        await fill('סיסמה ראשונית', 'secret12');
         await fill('תעודת זהות', '3');
         await fill('מספר אישי', '3');
         await fill('טלפון', '0500000003');
@@ -211,7 +211,7 @@ describe('admin', () => {
         await userEvent.click(within(sheet).getByRole('button', {name: 'יצירת המשתמש'}));
         expect(await screen.findByText('המשתמש נוצר')).toBeInTheDocument();
         expect(server.callsTo('POST', '/auth/register')[1].body).toEqual({
-            name: 'משה', user_name: 'moshe', pass: 'secret1', TZ: '3', police_id: '3',
+            name: 'משה', user_name: 'moshe', pass: 'secret12', TZ: '3', police_id: '3',
             phone: '0500000003', email: 'm@t.l', role: 'roleUser', unit: 'unit2', job_title: 'jt2',
         });
         expect(screen.queryByRole('dialog', {name: 'משתמש חדש'})).not.toBeInTheDocument();

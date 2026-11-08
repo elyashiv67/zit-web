@@ -2,6 +2,7 @@
 // separate test database, seeds it and passes the ids below through env)
 import fsx from 'node:fs';
 import sharp from 'sharp';
+import mongoose from 'mongoose';
 
 const {BASE, ADMIN_ROLE, USER_ROLE, HOME_UNIT: AFULA, UPLOADS_DIR, JOB_TITLE} = process.env;
 const SESSION_COOKIE = 'zit.sid';
@@ -53,6 +54,23 @@ async function t(label, client, method, path, body, expectStatus, check, rawBody
     console.log(`${ok ? 'PASS' : 'FAIL'}  ${String(r.status).padEnd(3)} ${method.padEnd(6)} ${path.padEnd(32)} ${label}${ok ? '' : '  <-- ' + why}`);
     return r;
 }
+// the test DB itself, for what the API doesn't show (stored hashes, the session documents)
+const testDb = (await mongoose.createConnection(process.env.DB, {dbName: process.env.DB_NAME}).asPromise()).db;
+const sessionIdOf = client => {
+    const v = decodeURIComponent(client.cookies[SESSION_COOKIE]); // s:<id>.<signature>
+    return v.slice(2, v.lastIndexOf('.'));
+};
+// edits the stored session of a logged-in client (connect-mongo may keep it as a JSON string)
+async function editSession(client, change) {
+    const sessions = testDb.collection('sessions');
+    const doc = await sessions.findOne({_id: sessionIdOf(client)});
+    const asString = typeof doc.session === 'string';
+    const s = asString ? JSON.parse(doc.session) : doc.session;
+    change(s);
+    await sessions.updateOne({_id: doc._id}, {$set: {session: asString ? JSON.stringify(s) : s}});
+}
+const storedHash = async user_name => (await testDb.collection('users').findOne({user_name})).pass;
+
 const cloneClient = (c, name, drop = [], set = {}) => { const n = new Client(name); n.cookies = {...c.cookies, ...set}; drop.forEach(k => delete n.cookies[k]); return n; };
 const must = (cond, msg) => { if (!cond) throw new Error(msg); return true; };
 const isArr = d => must(Array.isArray(d), 'expected array');
@@ -77,6 +95,12 @@ const ids = {};
 console.log('\n== general');
 await t('unknown route -> JSON 404', anon, 'GET', '/nope', undefined, 404, d => must(d.message, 'no message'));
 await t('malformed JSON -> 400', anon, 'POST', '/auth/login', undefined, 400, d => must(d.message === 'invalid JSON body', d.message), '{bad');
+{
+    const {gzipSync} = await import('node:zlib');
+    const res = await fetch(BASE + '/auth/login', {method: 'POST', body: gzipSync(JSON.stringify({username: 'a', password: 'b'})),
+        headers: {'content-type': 'application/json', 'content-encoding': 'gzip'}});
+    await t('gzip-compressed body -> 415 (not inflated)', anon, 'GET', '/health', undefined, 200, () => must(res.status === 415, `status ${res.status}`));
+}
 
 console.log('\n== auth / register');
 await t('login: empty body -> 400 + errors', anon, 'POST', '/auth/login', {}, 400, d => must(Array.isArray(d.errors), 'no errors[]'));
@@ -99,6 +123,17 @@ await t('login admin', admin, 'POST', '/auth/login', {username: adminBody.user_n
     await t('session cookie is HttpOnly + SameSite=Lax', anon, 'GET', '/health', undefined, 200, () => must(/HttpOnly/i.test(sc) && /SameSite=Lax/i.test(sc), sc));
 }
 await t('security headers (helmet)', anon, 'GET', '/health', undefined, 200, () => must(anon.lastHeaders.get('x-content-type-options') === 'nosniff', 'no helmet headers'));
+{
+    const hash = await storedHash(adminBody.user_name);
+    const doc = await testDb.collection('users').findOne({user_name: adminBody.user_name});
+    // the runner seeds the admin with cost 10; a login re-hashes it with the current cost
+    await t('login upgrades an old cost-10 hash to cost 12', anon, 'GET', '/health', undefined, 200,
+        () => must(hash.startsWith('$2b$12$'), `hash starts ${hash.slice(0, 7)}`));
+    await t('...without counting as a password change (other devices stay in)', anon, 'GET', '/health', undefined, 200,
+        () => must(!doc.pass_changed_at, 'pass_changed_at was set'));
+}
+await t('API responses are not cached (private, no-store)', admin, 'GET', '/auth/me', undefined, 200,
+    () => must(admin.lastHeaders.get('cache-control') === 'private, no-store', admin.lastHeaders.get('cache-control')));
 await t('username is case-insensitive', new Client('upper'), 'POST', '/auth/login', {username: adminBody.user_name.toUpperCase(), password: 'secret123'}, 200);
 {
     const before = admin.cookies[SESSION_COOKIE];
@@ -127,12 +162,11 @@ console.log('\n== roles');
 await t('list roles', admin, 'GET', '/role', undefined, 200, d => must(Array.isArray(d) && d.length >= 2, 'expected 2 roles'));
 await t('get role', admin, 'GET', `/role/${USER_ROLE}`, undefined, 200, d => must(d.name === 'user', 'wrong role'));
 await t('get role missing -> 404', admin, 'GET', `/role/${FAKE_ID}`, undefined, 404);
-await t('role level must be a positive integer -> 400', admin, 'POST', '/role', {name: 'user', level: 1.5}, 400);
-await t('create role duplicate name -> 409', admin, 'POST', '/role', {name: 'user', level: 99}, 409);
-await t('create role bad enum -> 400', admin, 'POST', '/role', {name: 'boss', level: 3}, 400);
-await t('patch role (no-op, same level)', admin, 'PATCH', `/role/${USER_ROLE}`, {level: 2}, 200, d => must(d.role?.level === 2, 'bad role'));
-await t('patch role missing -> 404', admin, 'PATCH', `/role/${FAKE_ID}`, {level: 5}, 404);
-await t('delete role missing -> 404', admin, 'DELETE', `/role/${FAKE_ID}`, undefined, 404);
+// the two roles are fixed: renaming or deleting one could leave the system with no admin
+await t('roles cannot be created, even by an admin -> 404', admin, 'POST', '/role', {name: 'admin', level: 3}, 404);
+await t('roles cannot be renamed -> 404', admin, 'PATCH', `/role/${USER_ROLE}`, {name: 'admin'}, 404);
+await t('roles cannot be deleted -> 404', admin, 'DELETE', `/role/${USER_ROLE}`, undefined, 404);
+await t('both roles are still there', admin, 'GET', '/role', undefined, 200, d => must(d.map(x => x.name).sort().join() === 'admin,user', JSON.stringify(d)));
 
 console.log('\n== job titles');
 await t('list job titles (logged out) -> 401', anon, 'GET', '/jobTitle', undefined, 401);
@@ -164,9 +198,17 @@ await t('/reg works for admin', admin, 'POST', '/auth/reg', userBody('r', USER_R
 const u2Body = userBody('u2', USER_ROLE, ids.unitB);
 r = await t('admin registers user2 (unit B)', admin, 'POST', '/auth/register', u2Body, 201);
 ids.u2 = r.data.user?._id;
-// only safe once a test user holds the role — otherwise this really deletes it
-if (ids.u1) await t('delete role in use -> 409', admin, 'DELETE', `/role/${USER_ROLE}`, undefined, 409);
-else { console.log('SKIP  delete role in use (user1 not created) — aborting'); process.exit(1); }
+{
+    const hash = await storedHash(u1Body.user_name);
+    await t('user1 hash is cost 12', anon, 'GET', '/health', undefined, 200, () => must(hash.startsWith('$2b$12$'), hash.slice(0, 7)));
+}
+await t('register with a 7-character password -> 400', admin, 'POST', '/auth/register', {...userBody('short', USER_ROLE, AFULA), pass: 'abcdefg'}, 400);
+await t('register with a password over 72 bytes -> 400', admin, 'POST', '/auth/register', {...userBody('long', USER_ROLE, AFULA), pass: 'א'.repeat(37)}, 400);
+{
+    const heb = userBody('heb', USER_ROLE, AFULA);
+    await t('36 Hebrew letters (exactly 72 bytes) are accepted', admin, 'POST', '/auth/register', {...heb, pass: 'א'.repeat(36)}, 201);
+    await t('...and log in', new Client('heb'), 'POST', '/auth/login', {username: heb.user_name, password: 'א'.repeat(36)}, 200);
+}
 await t('login user1', u1, 'POST', '/auth/login', {username: u1Body.user_name, password: 'secret123'}, 200, d => must(d.user.is_admin === false, 'should not be admin'));
 await t('login user2', u2, 'POST', '/auth/login', {username: u2Body.user_name, password: 'secret123'}, 200);
 await t('a user can list job titles', u1, 'GET', '/jobTitle', undefined, 200, isArr);
@@ -248,6 +290,12 @@ await t('user1 logs in on a 2nd device', u1b, 'POST', '/auth/login', {username: 
 await t('own change w/o current_password -> 400', u1, 'PATCH', `/user/${ids.u1}/password`, {new_password: 'newpass456'}, 400, d => must(d.field === 'current_password', d.message));
 await t('own change wrong current -> 400 (not 401)', u1, 'PATCH', `/user/${ids.u1}/password`, {current_password: 'nope', new_password: 'newpass456'}, 400);
 await t('new password too short -> 400', u1, 'PATCH', `/user/${ids.u1}/password`, {current_password: 'secret123', new_password: '123'}, 400);
+await t('new password of 7 characters -> 400', u1, 'PATCH', `/user/${ids.u1}/password`, {current_password: 'secret123', new_password: 'abcdefg'}, 400);
+// bcrypt ignores everything after 72 bytes; a Hebrew letter is 2 bytes, so 37 letters are 74 bytes
+await t('new password over 72 bytes -> 400', u1, 'PATCH', `/user/${ids.u1}/password`, {current_password: 'secret123', new_password: 'א'.repeat(37)}, 400,
+    d => must(/72/.test(d.message), d.message));
+await t('own id in capitals still means "own" (no bypass of current_password)', u1, 'GET', `/user/${ids.u1.toUpperCase()}`, undefined, 200);
+await t('a 12-character id is not an id -> 400', u1, 'GET', '/user/aaaaaaaaaaaa', undefined, 400);
 await t('new same as current -> 400', u1, 'PATCH', `/user/${ids.u1}/password`, {current_password: 'secret123', new_password: 'secret123'}, 400, d => must(d.field === 'new_password', d.message));
 await t('user1 cannot change user2 password -> 403', u1, 'PATCH', `/user/${ids.u2}/password`, {current_password: 'secret123', new_password: 'newpass456'}, 403);
 const u1BeforeChange = u1.cookies[SESSION_COOKIE];
@@ -261,6 +309,15 @@ await t('admin resets user2 password (no current)', admin, 'PATCH', `/user/${ids
 await t('user2 signed out after reset -> 401', u2, 'GET', '/auth/me', undefined, 401);
 await t('user2 logs in with reset password', u2, 'POST', '/auth/login', {username: u2Body.user_name, password: 'reset789'}, 200);
 await t('admin own change needs current -> 400', admin, 'PATCH', `/user/${ids.admin}/password`, {new_password: 'whatever1'}, 400);
+await t('...also with the own id in capitals -> 400', admin, 'PATCH', `/user/${ids.admin.toUpperCase()}/password`, {new_password: 'whatever1'}, 400,
+    d => must(d.field === 'current_password', d.message));
+{
+    // a session without a login time can't be checked against a password change, so it isn't trusted
+    const noTime = new Client('no-login-time');
+    await noTime.req('POST', '/auth/login', {username: u2Body.user_name, password: 'reset789'});
+    await editSession(noTime, s => { delete s.login_at; });
+    await t('a session without login_at -> 401', noTime, 'GET', '/auth/me', undefined, 401);
+}
 for (let i = 1; i <= 5; i++)
     await t(`wrong current #${i}`, u2, 'PATCH', `/user/${ids.u2}/password`, {current_password: 'bad', new_password: 'another1'}, 400);
 await t('6th wrong current -> 429', u2, 'PATCH', `/user/${ids.u2}/password`, {current_password: 'bad', new_password: 'another1'}, 429, d => must(/too many/.test(d.message), d.message));
@@ -446,6 +503,17 @@ r = await t('sideways photo is auto-rotated', u1, 'POST', `/pin/${ids.pin}/image
 await t('fake png (text with image/png type) -> 400', u1, 'POST', `/pin/${ids.pin}/images`, form([Buffer.from('not an image'), 'image/png', 'x.png']), 400, d => must(/not real images/.test(d.message), d.message));
 await t('good + fake in one batch -> 400, nothing saved', u1, 'POST', `/pin/${ids.pin}/images`, form([JPG, 'image/jpeg', 'ok.jpg'], [Buffer.from('nope'), 'image/jpeg', 'bad.jpg']), 400);
 await t('text/plain -> 400', u1, 'POST', `/pin/${ids.pin}/images`, form([Buffer.from('hi'), 'text/plain', 'x.txt']), 400);
+// checked by the file's first bytes, before sharp parses anything
+const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>');
+await t('SVG is refused by its bytes, not parsed -> 400', u1, 'POST', `/pin/${ids.pin}/images`, form([SVG, 'image/svg+xml', 'x.svg']), 400,
+    d => must(/not real images/.test(d.message), d.message));
+const GIF = await sharp({create: {width: 4, height: 4, channels: 3, background: '#000'}}).gif().toBuffer();
+await t('GIF (a real image, not an allowed one) -> 400', u1, 'POST', `/pin/${ids.pin}/images`, form([GIF, 'image/gif', 'x.gif']), 400);
+{
+    const withField = form([PNG, 'image/png', 'a.png']);
+    withField.append('note', 'x'.repeat(100_000));
+    await t('text fields in the upload form -> 400', u1, 'POST', `/pin/${ids.pin}/images`, withField, 400);
+}
 await t('over 25MB upload -> 400', u1, 'POST', `/pin/${ids.pin}/images`, form([Buffer.concat([JPG, Buffer.alloc(26 * MB)]), 'image/jpeg', 'huge.jpg']), 400, d => must(/25MB/.test(d.message), d.message));
 await t('wrong field name -> 400', u1, 'POST', `/pin/${ids.pin}/images`, form([PNG, 'image/png', 'a.png', 'photo']), 400);
 await t('no files -> 400', u1, 'POST', `/pin/${ids.pin}/images`, new FormData(), 400);
@@ -462,6 +530,8 @@ await t('too many for the pin -> 400', u1, 'POST', `/pin/${ids.pin}/images`, for
 await t('rejected uploads left no files', u1, 'GET', `/pin/${ids.pin}`, undefined, 200, () => must(dirCount() === 4, `dir has ${dirCount()}`));
 u3.raw = true;
 await t('unit-mate downloads image (jpeg)', u3, 'GET', `/pin/${ids.pin}/images/${imgs[0]}`, undefined, 200, d => must(/image\/jpeg/.test(u3.lastType) && d[0] === 0xff && d[1] === 0xd8, `type ${u3.lastType}`));
+await t('images are cached only privately by the browser', u3, 'GET', `/pin/${ids.pin}/images/${imgs[0]}`, undefined, 200,
+    () => must(/^private\b/.test(u3.lastHeaders.get('cache-control') ?? '') && !/public/.test(u3.lastHeaders.get('cache-control')), u3.lastHeaders.get('cache-control')));
 await t('other unit download -> 403', u2, 'GET', `/pin/${ids.pin}/images/${imgs[0]}`, undefined, 403);
 await t('logged out download -> 401', anon, 'GET', `/pin/${ids.pin}/images/${imgs[0]}`, undefined, 401);
 await t('path traversal name -> 404', u3, 'GET', `/pin/${ids.pin}/images/..%2F..%2Findex.js`, undefined, 404);

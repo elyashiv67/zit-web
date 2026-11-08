@@ -92,8 +92,11 @@ async function addPinImages(req, res) {
 }
 
 // isPinImage has already checked the name belongs to this pin
+// file names are new uuids, so an image never changes: the user's own browser may keep it for a day
+// (no re-download of up to 5MB per photo on every visit), but "private" keeps proxies / shared caches out
 async function getPinImage(req, res) {
-    return res.sendFile(path.join(pinImagesDir(req.pin._id), req.params.filename), (err) => {
+    res.set('Cache-Control', 'private, max-age=86400');
+    return res.sendFile(path.join(pinImagesDir(req.pin._id), req.params.filename), {cacheControl: false}, (err) => {
         if (err && !res.headersSent)
             res.status(404).json({message: 'image not found'});
     });

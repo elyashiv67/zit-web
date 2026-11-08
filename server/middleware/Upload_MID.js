@@ -42,7 +42,12 @@ const FILE_NAME_RE = /^[0-9a-f-]{36}\.(jpg|png|webp)$/;
 
 const upload = multer({
     storage: multer.diskStorage({destination: INCOMING_DIR}), // random file names
-    limits: {fileSize: MAX_UPLOAD_SIZE, files: MAX_IMAGES_PER_PIN},
+    // only files: no text fields at all (multer would keep them in memory), a few header lines per part.
+    // parts is one over files, so 11 images get the clearer "up to 10 images" message
+    limits: {
+        fileSize: MAX_UPLOAD_SIZE, files: MAX_IMAGES_PER_PIN,
+        fields: 0, parts: MAX_IMAGES_PER_PIN + 1, fieldNameSize: 100, headerPairs: 20,
+    },
     fileFilter: (req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
             return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
@@ -52,6 +57,23 @@ const upload = multer({
 }).array('images', MAX_IMAGES_PER_PIN);
 
 class BadImageError extends Error {}
+
+// the first bytes ("magic numbers") of the formats in INPUT_FORMATS
+const HEIF_BRANDS = ['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1', 'avif'];
+async function hasAcceptedSignature(filePath) {
+    const head = Buffer.alloc(16);
+    const handle = await fs.promises.open(filePath, 'r');
+    try {
+        await handle.read(head, 0, 16, 0);
+    } finally {
+        await handle.close();
+    }
+    const ascii = (from, to) => head.toString('latin1', from, to);
+    return (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff)                       // jpeg
+        || head.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) // png
+        || (ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP')                                // webp
+        || (ascii(4, 8) === 'ftyp' && HEIF_BRANDS.includes(ascii(8, 12)));                    // heic / heif
+}
 
 // a tiny semaphore: at most MAX_PARALLEL_COMPRESSIONS run fn at once. A finished one hands its
 // slot straight to the next waiting one, so the count can never go over the limit.
@@ -75,6 +97,11 @@ async function withCompressionSlot(fn) {
 //  - sharp drops EXIF by default, so the phone's GPS / device info isn't stored
 // if it's still too big, lower the quality, then the size, until it fits
 async function compressImage(file) {
+    // the browser's MIME type is only a claim; sharp would parse any format it knows (SVG, GIF, TIFF, PDF...).
+    // Check the file's own signature first, so only the formats we accept ever reach a decoder
+    if (!(await hasAcceptedSignature(file))) {
+        throw new BadImageError('one or more files are not real images (jpg, png, webp or heic)');
+    }
     let meta;
     try {
         // reading the header decodes nothing, so no pixel limit here; ours is checked below
@@ -130,6 +157,9 @@ const UPLOAD_ERRORS = {
     LIMIT_FILE_SIZE: `each image must be under ${MAX_UPLOAD_SIZE / 1024 / 1024}MB`,
     LIMIT_FILE_COUNT: `up to ${MAX_IMAGES_PER_PIN} images at a time`,
     LIMIT_UNEXPECTED_FILE: 'only image files, sent in the "images" field',
+    LIMIT_FIELD_COUNT: 'only image files can be sent here, no other fields',
+    LIMIT_PART_COUNT: `up to ${MAX_IMAGES_PER_PIN} images at a time`,
+    LIMIT_FIELD_KEY: 'field name is too long',
 };
 
 // multer's callback as a promise; the files end up on req.files

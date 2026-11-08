@@ -12,4 +12,10 @@ async function getUserById_auth(id) {
     return User.findById(id).populate('role').populate('unit').populate('job_title');
 }
 
-export {getUserById_auth, getUserByName_auth};
+// replaces the stored hash only (e.g. a stronger bcrypt cost after a login). Not a password change:
+// pass_changed_at stays, so the user's other devices stay logged in
+async function replacePasswordHash_auth(id, hash) {
+    await User.updateOne({_id: id}, {$set: {pass: hash}});
+}
+
+export {getUserById_auth, getUserByName_auth, replacePasswordHash_auth};

@@ -34,15 +34,19 @@ describe('validatePin', () => {
 });
 
 describe('validateUser', () => {
-    const user = {name: 'דנה', user_name: 'dana', pass: 'secret1', TZ: '1', police_id: '2', phone: '0501234567', email: 'a@b.co', role: 'r', unit: 'u'};
+    const user = {name: 'דנה', user_name: 'dana', pass: 'secret12', TZ: '1', police_id: '2', phone: '0501234567', email: 'a@b.co', role: 'r', unit: 'u'};
     it('accepts a full user', () => expect(validateUser(user, {requirePassword: true})).toEqual({}));
     it('phone is up to 10 digits', () => {
         expect(validateUser({...user, phone: '050-123'}).phone).toBeTruthy();
         expect(validateUser({...user, phone: '05012345678'}).phone).toBeTruthy();
     });
     it('email format', () => expect(validateUser({...user, email: 'nope'}).email).toBeTruthy());
-    it('password at least 6 when creating', () => {
-        expect(validateUser({...user, pass: '12345'}, {requirePassword: true}).pass).toBeTruthy();
+    it('password: 8 or more characters, at most 72 bytes (the server rules; bcrypt reads only 72 bytes)', () => {
+        expect(validateUser({...user, pass: 'abcdefg'}, {requirePassword: true}).pass).toBe('לפחות 8 תווים');
+        expect(validateUser({...user, pass: 'abcdefgh'}, {requirePassword: true}).pass).toBeUndefined();
+        // a Hebrew letter is 2 bytes: 36 fit, 37 don't
+        expect(validateUser({...user, pass: 'א'.repeat(36)}, {requirePassword: true}).pass).toBeUndefined();
+        expect(validateUser({...user, pass: 'א'.repeat(37)}, {requirePassword: true}).pass).toBe('ארוכה מדי (עד 36 אותיות בעברית או 72 באנגלית)');
     });
     it('role and unit are required', () => {
         const e = validateUser({...user, role: '', unit: ''});
@@ -55,14 +59,19 @@ describe('validateUser', () => {
 });
 
 describe('validatePasswordChange', () => {
-    it('needs current, 6+ and matching confirm', () => {
+    it('needs current, 8+ and matching confirm', () => {
         expect(validatePasswordChange({current: '', next: '123', confirm: 'x'})).toEqual({
             current: expect.any(String), next: expect.any(String), confirm: expect.any(String),
         });
-        expect(validatePasswordChange({current: 'old', next: 'newpass', confirm: 'newpass'})).toEqual({});
+        expect(validatePasswordChange({current: 'old', next: 'newpass1', confirm: 'newpass1'})).toEqual({});
+        expect(validatePasswordChange({current: 'old', next: 'newpass', confirm: 'newpass'}).next).toBe('לפחות 8 תווים');
+    });
+    it('a new password over 72 bytes is refused', () => {
+        const long = 'א'.repeat(37);
+        expect(validatePasswordChange({current: 'old', next: long, confirm: long}).next).toBe('ארוכה מדי (עד 36 אותיות בעברית או 72 באנגלית)');
     });
     it('admin reset does not need the current password', () => {
-        expect(validatePasswordChange({current: '', next: 'newpass', confirm: 'newpass'}, {needCurrent: false})).toEqual({});
+        expect(validatePasswordChange({current: '', next: 'newpass1', confirm: 'newpass1'}, {needCurrent: false})).toEqual({});
     });
 });
 

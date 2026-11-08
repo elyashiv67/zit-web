@@ -13,6 +13,8 @@ function errorHandler(err, req, res, next) {
         return res.status(400).json({message: 'invalid JSON body'});
     if (err.type === 'entity.too.large')
         return res.status(413).json({message: 'request body is too large'});
+    if (err.type === 'encoding.unsupported')
+        return res.status(415).json({message: 'compressed request bodies are not accepted'});
 
     // unique index violation
     if (err.code === 11000) {
