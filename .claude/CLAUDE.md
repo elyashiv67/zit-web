@@ -79,6 +79,10 @@ read it before working, and update the "Status" and "Next" sections when somethi
   (a second Vite on port 5174). Layout bugs (like the RTL label shift) only show up there, not in jsdom.
   After a check, make sure nothing still listens on 5174. A leftover Vite from an older run keeps serving stale
   dependencies ("Outdated Optimize Dep" 504, then the map's lazy import fails), and a new `--strictPort` Vite can't start.
+  A check Vite (`API_PROXY_TARGET` set) uses its own cache, `node_modules/.vite-check` (`vite.config.js`). When it
+  shared `node_modules/.vite`, it rewrote the chunks under the owner's running `--host` dev server, and the pin page's
+  lazy map import loaded a second React ("Cannot read properties of null (reading 'useState')" on the phone).
+  After a package update, restart the dev server (`npm run dev -- --host --force`).
 
 ## Status (last updated 2026-11-05)
 
