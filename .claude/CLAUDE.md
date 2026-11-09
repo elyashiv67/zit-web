@@ -19,9 +19,15 @@ read it before working, and update the "Status" and "Next" sections when somethi
 - `react/` — React 19 + Vite 7 app, deployed to GitHub Pages under `/zit-web/` (until the Docker server replaces it).
 - Docker deploy (2026-11-09): `docker-compose.yml` (project `zit`: web / api / mongo), `server/Dockerfile`,
   `react/Dockerfile` (build, then nginx 1.28), both `.dockerignore`s, `deploy/` (nginx template, mongo-init,
-  backup.sh, `*.env.example`), root `.env.example` (DOMAIN), `.gitattributes` (LF for server files).
-  Real secrets (`/.env`, `deploy/*.env`) are gitignored and live on the server only. Keep the guide's appendix in sync:
+  backup.sh, `*.env.example`), `.gitattributes` (LF for server files).
+  Real secrets (`deploy/*.env`) are gitignored and live on the server only. Keep the guide's appendix in sync:
   it is generated from these files.
+- **Public access is Tailscale Funnel** (owner, 2026-11-09), not a domain + Let's Encrypt: Funnel (HTTPS, port 443 of
+  `<machine>.<tailnet>.ts.net`) → nginx on `127.0.0.1:8080` (plain http, `absolute_redirect off`, realip from
+  X-Forwarded-For with the Docker gateway ranges trusted, `X-Forwarded-Proto https` to the API). No open web ports.
+  The owner's personal projects share the server: tailnet-only via `tailscale serve` on other ports, published on
+  127.0.0.1. Not yet confirmed: that Funnel passes the real client IP (guide step 10 checks it; if not, the login
+  rate limit sees every user as one).
 
 ## Server (done, ready for the frontend)
 
@@ -133,7 +139,7 @@ Docker hasn't run the files yet (no Docker on the dev PC). Open the reports in a
 2. **Deploy to a private server with Docker.** The files are ready; the owner commits them, tags `v1.0.0`, and follows
    `.claude/reports/deployment-guide.html` from step 1 on the server. It covers the must-do list (M1–M9) in `docs/security-report.html`:
    - nginx serves the app and proxies `/api` on one origin, so the Lax cookie keeps working;
-   - HTTPS;
+   - HTTPS (Tailscale Funnel);
    - `NODE_ENV=production`, a new 48+ character `SESSION_SECRET`, `TRUST_PROXY=1`;
    - MongoDB locked down;
    - a non-root container;

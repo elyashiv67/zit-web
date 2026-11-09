@@ -1,18 +1,16 @@
-# ZitWeb: nginx (web) → Node API (api) → MongoDB (mongo). Only "web" is reachable from outside.
-# Step-by-step: .claude/reports/deployment-guide.html. Secrets live in .env and deploy/*.env on the server only.
+# ZitWeb: Tailscale Funnel (https, on the host) → nginx (web) → Node API (api) → MongoDB (mongo).
+# Step-by-step: .claude/reports/deployment-guide.html. Secrets live in deploy/*.env on the server only.
 name: zit
 
 services:
   web:
     build: ./react
     ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in the .env file next to this one}
+      # this machine only: the public way in is Tailscale Funnel (tailscale funnel --bg 8080).
+      # Docker-published ports skip ufw, so never drop the 127.0.0.1.
+      - "127.0.0.1:8080:80"
     volumes:
       - ./deploy/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       api:
         condition: service_healthy
