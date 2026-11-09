@@ -1,0 +1,7 @@
+# Files that run or are read on the Linux server keep LF line endings, even when checked out on Windows
+# (a CRLF "#!/bin/sh" line fails with "not found").
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+.dockerignore   text eol=lf
+deploy/**       text eol=lf
+docker-compose.yml text eol=lf

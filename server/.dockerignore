@@ -1,0 +1,15 @@
+# kept out of the API image: secrets, local data, dev-only folders
+node_modules
+.env
+.env.*
+environment
+uploads
+tests
+scripts
+postman
+DB
+*.md
+*.log
+Dockerfile
+.dockerignore
+.gitignore

@@ -121,7 +121,13 @@ footer { font-size: 14px; color: var(--muted); }
 <section>
     <h2>Read first</h2>
     <div class="note bad">
-        <p><b>The config files below have not been run yet.</b> Docker isn't installed on the development PC, so they couldn't be tested. Every value in them was checked against the code (ports, paths, env names, the <code>/zit-web/</code> base, the <code>/api</code> prefix, sharp's Linux binary in the lock file), and each step ends with a check that catches mistakes right away. Expect one or two small fixes on the first real run.</p>
+        <p><b>The deploy files are in the repo now (2026-11-09), but Docker itself hasn't run them yet:</b> it isn't installed on the development PC. What was tested there:</p>
+        <ul>
+            <li>both build contexts, filtered by their <code>.dockerignore</code>: no secrets inside, and the API installs with production packages only (sharp and bcrypt load) while the React app builds;</li>
+            <li>that API copy, run with <code>NODE_ENV=production</code> and <code>TRUST_PROXY=1</code> behind nginx's headers: it starts with no warnings, the login cookie is Secure, HttpOnly and SameSite=Lax, a plain-http login gets no cookie, and the logs show the client's IP;</li>
+            <li>the compose file parses, and the nginx template's syntax was checked by script (braces, <code>;</code>, only <code>${DOMAIN}</code> filled in). nginx itself first runs on the server: step 9 starts with <code>nginx -t</code>.</li>
+        </ul>
+        <p>Every value was checked against the code (ports, paths, env names, the <code>/zit-web/</code> base, the <code>/api</code> prefix, the Linux binaries in the lock files), and each step ends with a check. Expect one or two small fixes on the first real run.</p>
     </div>
     <div class="note info">
         <p><b>Compared with your <code>docker-try</code> branch</b> (an earlier attempt before the frontend existed), this setup:</p>
@@ -262,7 +268,7 @@ sudo usermod -aG docker deploy</code></pre>
 <!-- ============================== STEP 3 ============================== -->
 <section id="s3">
 <div class="step">
-    <div class="step-head"><div class="num">3</div><div><h3>Add the deploy files to the repo <span class="where">your PC</span></h3><p>Nine small files (full contents in the <a href="#files">appendix</a>). Commit them on a branch, merge to <code>main</code>, and tag the release, e.g. <code>v1.0.0</code>.</p></div></div>
+    <div class="step-head"><div class="num">3</div><div><h3>Commit the deploy files and tag a release <span class="where">your PC</span></h3><p><b>The files already exist</b> (created on branch <code>pre-deploy</code>; contents also in the <a href="#files">appendix</a>). Commit them, merge to <code>main</code>, and tag the release, e.g. <code>git tag v1.0.0 &amp;&amp; git push --tags</code>.</p></div></div>
     <div class="table-box">
         <table>
             <thead><tr><th>File</th><th>What it does</th><th>In git?</th></tr></thead>
@@ -276,15 +282,16 @@ sudo usermod -aG docker deploy</code></pre>
                 <tr><td><code>deploy/mongo-init.js</code></td><td>Creates the app's database user on the first start</td><td>yes</td></tr>
                 <tr><td><code>deploy/backup.sh</code></td><td>Nightly database and photo backup</td><td>yes</td></tr>
                 <tr><td><code>deploy/*.env.example</code> + root <code>.env.example</code></td><td>Templates for the secrets (no values)</td><td>yes</td></tr>
+                <tr><td><code>.gitattributes</code></td><td>Keeps LF line endings in the files the Linux server runs (a CRLF <code>backup.sh</code> fails)</td><td>yes</td></tr>
                 <tr><td><code>deploy/api.env</code>, <code>deploy/mongo.env</code>, <code>.env</code></td><td>The real secrets, created on the server only (step 5)</td><td><b>never</b></td></tr>
             </tbody>
         </table>
     </div>
-    <p>Add these lines to the root <code>.gitignore</code> so the real secret files can never be committed:</p>
+    <p>The root <code>.gitignore</code> already has these lines, so the real secret files can never be committed:</p>
 <pre><code>/.env
 deploy/*.env
 !deploy/*.env.example</code></pre>
-    <div class="verify"><h4>Check</h4><ul><li><code>git status</code> after creating a test <code>deploy/api.env</code> doesn't list it.</li><li>Server and UI tests still pass. Nothing in the app code changes.</li></ul></div>
+    <div class="verify"><h4>Check</h4><ul><li><code>git status</code> after creating a test <code>deploy/api.env</code> doesn't list it (checked on 2026-11-09).</li><li>Server and UI tests still pass. Nothing in the app code changes.</li></ul></div>
 </div>
 </section>
 
@@ -374,9 +381,10 @@ shred -u /tmp/zit.archive.gz; unset ATLAS_URI
 
 <span class="c"># 2) photos: from the machine the server runs on today (its server/uploads/pins folder)</span>
 <span class="c">#    on that machine:  scp -r server/uploads/pins deploy@SERVER_IP:/tmp/pins</span>
-docker compose up -d api               <span class="c"># creates the uploads volume</span>
-docker compose cp /tmp/pins api:/data/uploads/
-docker compose exec -u root api chown -R node:node /data/uploads
+docker compose up -d api               <span class="c"># creates the uploads volume (and its pins/ folder)</span>
+<span class="c"># copy with a throwaway container: api has no Linux capabilities, so even its root can't chown.</span>
+<span class="c"># 1000 is the "node" user the API runs as</span>
+docker run --rm -v zit_uploads:/data -v /tmp/pins:/src:ro alpine sh -c 'cp -a /src/. /data/pins/ &amp;&amp; chown -R 1000:1000 /data'
 rm -rf /tmp/pins</code></pre>
     <div class="opt"><h4><span class="where">Option A</span> staying on Atlas</h4>
         <ul>
@@ -402,7 +410,9 @@ docker compose exec api sh -c 'ls /data/uploads/pins | wc -l'    <span class="c"
 <div class="step">
     <div class="step-head"><div class="num">9</div><div><h3>Build and start everything <span class="where">server</span></h3><p>The first build takes a few minutes: it installs packages and builds the React app.</p></div></div>
 <pre><code>cd /srv/zit
+docker compose config -q              <span class="c"># the compose file and .env are valid (prints nothing)</span>
 docker compose build
+docker compose run --rm --no-deps web nginx -t   <span class="c"># "syntax is ok" / "test is successful"</span>
 docker compose up -d
 docker compose ps                     <span class="c"># all three "running", api and mongo "healthy"</span>
 docker compose logs -f api            <span class="c"># Ctrl+C to stop following</span></code></pre>
@@ -511,12 +521,13 @@ docker compose ps</code></pre>
 
 <section id="files">
     <h2>Appendix: the files</h2>
-    <p class="muted">Copy them as they are; only the placeholders in the <code>.example</code> files change, and only on the server.</p>
+    <p class="muted">The same files are in the repo; the repo is the source of truth. Only the <code>.example</code> files get copied and filled in, and only on the server (step 5).</p>
 
     <details>
         <summary><code>docker-compose.yml</code> (repo root)</summary>
         <div>
 <pre><code><span class="c"># ZitWeb: nginx (web) → Node API (api) → MongoDB (mongo). Only "web" is reachable from outside.</span>
+<span class="c"># Step-by-step: .claude/reports/deployment-guide.html. Secrets live in .env and deploy/*.env on the server only.</span>
 name: zit
 
 services:
@@ -542,8 +553,12 @@ services:
       - uploads:/data/uploads
     init: true                 <span class="c"># proper signal handling / zombie reaping for node as PID 1</span>
     mem_limit: 1g              <span class="c"># photo compression peaks around 600MB</span>
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL                    <span class="c"># node needs no Linux capabilities (port 4586 is above 1024)</span>
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:4586/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4586/health').then(r =&gt; process.exit(r.ok ? 0 : 1), () =&gt; process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -552,6 +567,7 @@ services:
       mongo:
         condition: service_healthy
     restart: unless-stopped
+    <span class="c"># no "ports:" on purpose: only nginx reaches the API</span>
 
   <span class="c"># Option A (Atlas): delete this whole service and the mongo-data volume below</span>
   mongo:
@@ -567,7 +583,8 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
-    <span class="c"># no "ports:" on purpose: only the api container can reach the database</span>
+    <span class="c"># no "ports:" on purpose: only the api container can reach the database.</span>
+    <span class="c"># Docker-published ports skip ufw, so never add one here.</span>
 
 volumes:
   uploads:
@@ -586,8 +603,8 @@ WORKDIR /app
 <span class="c"># packages first: this layer is reused until package*.json changes</span>
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev &amp;&amp; npm cache clean --force
-<span class="c"># fail the build here, not on the first photo upload, if sharp's Linux binary is missing</span>
-RUN node -e "require('sharp')"
+<span class="c"># fail the build here, not on the first login or photo upload, if a native binary is missing</span>
+RUN node -e "require('sharp'); require('bcrypt')"
 
 COPY . .
 <span class="c"># the photos volume is mounted here; owned by the unprivileged "node" user</span>
@@ -602,8 +619,10 @@ CMD ["node", "index.js"]</code></pre>
     <details>
         <summary><code>server/.dockerignore</code></summary>
         <div>
-<pre><code>node_modules
+<pre><code><span class="c"># kept out of the API image: secrets, local data, dev-only folders</span>
+node_modules
 .env
+.env.*
 environment
 uploads
 tests
@@ -611,6 +630,7 @@ scripts
 postman
 DB
 *.md
+*.log
 Dockerfile
 .dockerignore
 .gitignore</code></pre>
@@ -629,8 +649,8 @@ COPY . .
 <span class="c"># VITE_API_URL stays unset: the app calls /api on its own domain</span>
 RUN npm run build
 
-<span class="c"># 2) serve it. nginx fills in ${DOMAIN} in the mounted template at start</span>
-FROM nginx:1.27-alpine
+<span class="c"># 2) serve it. nginx fills in ${DOMAIN} in the mounted template (deploy/nginx.conf.template) at start</span>
+FROM nginx:1.28-alpine
 COPY --from=build /app/dist /usr/share/nginx/html/zit-web</code></pre>
         </div>
     </details>
@@ -638,9 +658,14 @@ COPY --from=build /app/dist /usr/share/nginx/html/zit-web</code></pre>
     <details>
         <summary><code>react/.dockerignore</code></summary>
         <div>
-<pre><code>node_modules
+<pre><code><span class="c"># kept out of the build: installed / built output, the logo source packs, local env files</span>
+node_modules
 dist
 assets
+.env
+.env.*
+coverage
+*.log
 Dockerfile
 .dockerignore</code></pre>
         </div>
@@ -649,12 +674,23 @@ Dockerfile
     <details>
         <summary><code>deploy/nginx.conf.template</code></summary>
         <div>
-<pre><code><span class="c"># ${DOMAIN} is filled in from the environment when the container starts (nginx's own $variables are left alone)</span>
+<pre><code><span class="c"># nginx for ZitWeb, used by the "web" container (docker-compose.yml).</span>
+<span class="c"># ${DOMAIN} is filled in from the environment when the container starts (nginx's own $variables are left alone).</span>
+<span class="c"># The result lands in /etc/nginx/conf.d/default.conf, inside nginx's http { } block.</span>
+
+<span class="c"># Built files under /zit-web/assets/ have a content hash in their name, so they can be cached for a year.</span>
+<span class="c"># Everything else in the app (index.html, icons, manifest) is revalidated, so a new version shows up at once.</span>
+<span class="c"># After try_files falls back to index.html, $uri is /zit-web/index.html, so the fallback gets "no-cache".</span>
+map $uri $zit_cache_control {
+    ~^/zit-web/assets/  "public, max-age=31536000, immutable";
+    default             "no-cache";
+}
 
 <span class="c"># http → https</span>
 server {
     listen 80;
     server_name ${DOMAIN};
+    server_tokens off;
     return 301 https://$host$request_uri;
 }
 
@@ -672,24 +708,35 @@ server {
     client_max_body_size 1m;
 
     location = / { return 302 /zit-web/; }
+    location = /zit-web { return 301 /zit-web/; }
 
     <span class="c"># the React app. NOTE: add_header inside a location replaces the server-level ones, so all are listed here</span>
     location /zit-web/ {
         root /usr/share/nginx/html;
         try_files $uri $uri/ /zit-web/index.html;
 
-        add_header Cache-Control "no-cache" always;
+        gzip on;
+        gzip_types text/css application/javascript image/svg+xml application/json application/manifest+json;
+
+        add_header Cache-Control $zit_cache_control always;
         add_header Strict-Transport-Security "max-age=31536000" always;
         add_header X-Content-Type-Options "nosniff" always;
         <span class="c"># OSM's tile servers require a referrer, so not "no-referrer"</span>
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        <span class="c"># the pin form asks for the phone's location; photos come from a file input, which needs no camera permission</span>
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self)" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
     }
 
-    <span class="c"># the API: "/api/x" → "http://api:4586/x" (the trailing slash strips /api). helmet adds the API's headers</span>
+    <span class="c"># the API: "/api/x?y" → "http://api:4586/x?y". helmet adds the API's own security headers.</span>
     location /api/ {
-        proxy_pass http://api:4586/;
+        <span class="c"># Docker's DNS, asked again every 10s: a rebuilt api container gets a new address, and nginx follows it</span>
+        <span class="c"># (a fixed "proxy_pass http://api:4586/" would keep the old address and answer 502 until a restart)</span>
+        resolver 127.0.0.11 valid=10s ipv6=off;
+        set $api_upstream api:4586;
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass http://$api_upstream;
+
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         <span class="c"># exactly one hop (nginx), matching TRUST_PROXY=1; the client can't fake this value</span>
@@ -702,6 +749,9 @@ server {
         proxy_send_timeout 300s;
         proxy_read_timeout 300s;
     }
+
+    <span class="c"># nothing else is served</span>
+    location / { return 404; }
 }</code></pre>
         </div>
     </details>
@@ -709,8 +759,11 @@ server {
     <details>
         <summary><code>deploy/mongo-init.js</code></summary>
         <div>
-<pre><code>// Runs once, on the first start with an EMPTY mongo-data volume.
-// Creates the app's own user: read/write on the Zit database only (not root).
+<pre><code><span class="c">// Runs once, on the first start with an EMPTY mongo-data volume (the mongo image runs it with mongosh).</span>
+<span class="c">// Creates the app's own user: read/write on the Zit database only (not root).</span>
+<span class="c">// ZIT_APP_PASSWORD comes from deploy/mongo.env and must match the password inside DB= in deploy/api.env.</span>
+if (!process.env.ZIT_APP_PASSWORD) throw new Error('ZIT_APP_PASSWORD is not set in deploy/mongo.env');
+
 db.getSiblingDB('Zit').createUser({
     user: 'zit_app',
     pwd: process.env.ZIT_APP_PASSWORD,
@@ -720,28 +773,51 @@ db.getSiblingDB('Zit').createUser({
     </details>
 
     <details>
-        <summary><code>deploy/api.env.example</code>, <code>deploy/mongo.env.example</code>, <code>.env.example</code></summary>
+        <summary><code>deploy/api.env.example</code></summary>
         <div>
-<pre><code><span class="c"># ---- deploy/api.env.example → copy to deploy/api.env on the server, chmod 600 ----</span>
+<pre><code><span class="c"># API settings for production. On the server: cp deploy/api.env.example deploy/api.env &amp;&amp; chmod 600 deploy/api.env</span>
+<span class="c"># Replace every &lt;...&gt;. deploy/api.env is gitignored: never commit it.</span>
 NODE_ENV=production
 PORT=4586
-<span class="c"># Option B (container). Option A: the Atlas connection string of a readWrite-on-Zit user</span>
-DB=mongodb://zit_app:&lt;ZIT_APP_PASSWORD&gt;@mongo:27017/Zit?authSource=Zit
-<span class="c"># new: openssl rand -base64 48</span>
-SESSION_SECRET=&lt;48+ random characters&gt;
-<span class="c"># COPY the existing value from server/.env; a new one makes stored DVR passwords unreadable</span>
-DVR_SECRET=&lt;existing value&gt;
-<span class="c"># nginx is the one proxy in front</span>
-TRUST_PROXY=1
-UPLOADS_DIR=/data/uploads
-<span class="c"># COOKIE_SECURE is on by default in production. No JWT_SECRET: it's no longer used</span>
 
-<span class="c"># ---- deploy/mongo.env.example → deploy/mongo.env (Option B only), chmod 600 ----</span>
+<span class="c"># Option B (Mongo container): only the password changes, the same value as ZIT_APP_PASSWORD in deploy/mongo.env.</span>
+<span class="c"># Option A (Atlas): the connection string of an Atlas user with readWrite on Zit only.</span>
+DB=mongodb://zit_app:&lt;ZIT_APP_PASSWORD&gt;@mongo:27017/Zit?authSource=Zit
+
+<span class="c"># NEW value, never the development one: openssl rand -base64 48</span>
+SESSION_SECRET=&lt;48+ random characters&gt;
+
+<span class="c"># COPY the existing value from server/.env on your PC. A new value makes every stored DVR password unreadable.</span>
+<span class="c"># Keep a copy offline too (a password manager), separate from the backups.</span>
+DVR_SECRET=&lt;existing value&gt;
+
+<span class="c"># nginx is the one proxy in front of the API</span>
+TRUST_PROXY=1
+<span class="c"># the "uploads" volume (pin photos)</span>
+UPLOADS_DIR=/data/uploads
+
+<span class="c"># COOKIE_SECURE is on by default in production. JWT_SECRET is no longer used.</span></code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>deploy/mongo.env.example</code></summary>
+        <div>
+<pre><code><span class="c"># MongoDB container settings (Option B only). On the server: cp deploy/mongo.env.example deploy/mongo.env &amp;&amp; chmod 600 deploy/mongo.env</span>
+<span class="c"># Use hex passwords (openssl rand -hex 24): they never need escaping inside a connection string.</span>
+<span class="c"># These are read only on the FIRST start (empty mongo-data volume); changing them later changes nothing.</span>
 MONGO_INITDB_ROOT_USERNAME=root
 MONGO_INITDB_ROOT_PASSWORD=&lt;openssl rand -hex 24&gt;
-ZIT_APP_PASSWORD=&lt;openssl rand -hex 24, the same value as inside DB= above&gt;
+<span class="c"># the app's own user (deploy/mongo-init.js): the same value as inside DB= in deploy/api.env</span>
+ZIT_APP_PASSWORD=&lt;openssl rand -hex 24&gt;</code></pre>
+        </div>
+    </details>
 
-<span class="c"># ---- .env.example (repo root) → .env: read by docker compose itself ----</span>
+    <details>
+        <summary><code>.env.example</code> (repo root)</summary>
+        <div>
+<pre><code><span class="c"># Read by docker compose itself (not by the app). On the server: cp .env.example .env</span>
+<span class="c"># Your real domain goes only into .env on the server, never into a tracked file (the repo is public).</span>
 DOMAIN=zit.example.org</code></pre>
         </div>
     </details>
@@ -750,8 +826,8 @@ DOMAIN=zit.example.org</code></pre>
         <summary><code>deploy/backup.sh</code></summary>
         <div>
 <pre><code>#!/bin/sh
-# Nightly backup of the database and the pin photos, kept 14 days.
-# Run as root from cron (step 12). Copy /srv/zit-backups off the server as well.
+<span class="c"># Nightly backup of the database and the pin photos, kept 14 days.</span>
+<span class="c"># Run as root from cron (deployment guide, step 12). Copy /srv/zit-backups off the server as well.</span>
 set -eu
 cd /srv/zit
 DIR=/srv/zit-backups
@@ -759,24 +835,42 @@ DAY=$(date +%F)
 umask 077
 mkdir -p "$DIR"
 
-# database, without login sessions. Option B (container):
+<span class="c"># database, without login sessions. Option B (container):</span>
 docker compose exec -T mongo sh -c 'mongodump -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db Zit --excludeCollection sessions --archive --gzip' \
-  &gt; "$DIR/db-$DAY.archive.gz"
-# Option A (Atlas): put ATLAS_BACKUP_URI=... in /srv/zit/deploy/backup.env (chmod 600) and use instead:
-#   . /srv/zit/deploy/backup.env
-#   docker run --rm mongo:8.0 mongodump --uri "$ATLAS_BACKUP_URI" --db Zit --excludeCollection sessions --archive --gzip &gt; "$DIR/db-$DAY.archive.gz"
+  &gt; "$DIR/db-$DAY.archive.gz.part"
+<span class="c"># Option A (Atlas): put ATLAS_BACKUP_URI=... in /srv/zit/deploy/backup.env (chmod 600), then use these two lines</span>
+<span class="c"># instead of the docker compose line above:</span>
+<span class="c">#   . /srv/zit/deploy/backup.env</span>
+<span class="c">#   docker run --rm mongo:8.0 mongodump --uri "$ATLAS_BACKUP_URI" --db Zit --excludeCollection sessions --archive --gzip &gt; "$DIR/db-$DAY.archive.gz.part"</span>
+mv "$DIR/db-$DAY.archive.gz.part" "$DIR/db-$DAY.archive.gz"
 
-# photos (the "uploads" volume of the "zit" compose project)
-docker run --rm -v zit_uploads:/data:ro alpine tar czf - -C /data . &gt; "$DIR/uploads-$DAY.tgz"
+<span class="c"># photos (the "uploads" volume of the "zit" compose project)</span>
+docker run --rm -v zit_uploads:/data:ro alpine tar czf - -C /data . &gt; "$DIR/uploads-$DAY.tgz.part"
+mv "$DIR/uploads-$DAY.tgz.part" "$DIR/uploads-$DAY.tgz"
 
-# keep two weeks
+<span class="c"># keep two weeks (and drop half-written files from a failed night)</span>
 find "$DIR" -type f -mtime +14 -delete
+find "$DIR" -type f -name '*.part' -mmin +60 -delete
 echo "$(date -Is) backup ok: $(du -sh "$DIR" | cut -f1)"</code></pre>
+        </div>
+    </details>
+
+    <details>
+        <summary><code>.gitattributes</code> (repo root)</summary>
+        <div>
+<pre><code><span class="c"># Files that run or are read on the Linux server keep LF line endings, even when checked out on Windows</span>
+<span class="c"># (a CRLF "#!/bin/sh" line fails with "not found").</span>
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+.dockerignore   text eol=lf
+deploy/**       text eol=lf
+docker-compose.yml text eol=lf</code></pre>
         </div>
     </details>
 </section>
 
 <footer>
+    <p>Updated 2026-11-09: the deploy files now exist in the repo (branch <code>pre-deploy</code>), and the appendix is generated from them. Changes from the first version: nginx 1.28 (stable), nginx finds the <code>api</code> container through Docker's DNS on each request (so a rebuilt <code>api</code> doesn't cause 502s), hashed assets are cached for a year with gzip, <code>/zit-web</code> redirects to <code>/zit-web/</code>, other paths get 404, <code>api</code> runs with no Linux capabilities and <code>no-new-privileges</code> (so step 8 copies the photos with a throwaway container), backups write to a temporary file first, and <code>.gitattributes</code> keeps LF endings.</p>
     <p>Based on the code as of 2026-11-08 (branch <code>final-tweaks</code>, after the security fixes) and the open items in <code>docs/security-report.html</code>. Checked against: <code>server/config/env.js</code> (env names and production rules), <code>server/index.js</code> (port 4586, all interfaces, graceful shutdown), <code>server/app.js</code> (<code>/health</code>, trust proxy), <code>react/vite.config.js</code> and <code>router.jsx</code> (base and basename <code>/zit-web/</code>, <code>/api</code> prefix removed), <code>api/client.js</code> (<code>/api</code> default), the lock files (Linux binaries for sharp, rollup and esbuild), and the earlier <code>docker-try</code> branch. Not run: Docker isn't installed on the development PC.</p>
 </footer>
 

@@ -1,0 +1,63 @@
+# ZitWeb: nginx (web) → Node API (api) → MongoDB (mongo). Only "web" is reachable from outside.
+# Step-by-step: .claude/reports/deployment-guide.html. Secrets live in .env and deploy/*.env on the server only.
+name: zit
+
+services:
+  web:
+    build: ./react
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in the .env file next to this one}
+    volumes:
+      - ./deploy/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build: ./server
+    env_file: ./deploy/api.env
+    volumes:
+      - uploads:/data/uploads
+    init: true                 # proper signal handling / zombie reaping for node as PID 1
+    mem_limit: 1g              # photo compression peaks around 600MB
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL                    # node needs no Linux capabilities (port 4586 is above 1024)
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4586/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:                # Option A (Atlas): delete these 3 lines
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    # no "ports:" on purpose: only nginx reaches the API
+
+  # Option A (Atlas): delete this whole service and the mongo-data volume below
+  mongo:
+    image: mongo:8.0
+    env_file: ./deploy/mongo.env
+    volumes:
+      - mongo-data:/data/db
+      - ./deploy/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    # no "ports:" on purpose: only the api container can reach the database.
+    # Docker-published ports skip ufw, so never add one here.
+
+volumes:
+  uploads:
+  mongo-data:

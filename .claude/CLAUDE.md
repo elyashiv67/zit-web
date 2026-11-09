@@ -16,7 +16,12 @@ read it before working, and update the "Status" and "Next" sections when somethi
 ## Layout
 
 - `server/` — Express 5 + Mongoose 9 + Zod 4 API. Docs: `server/API.md`. Env: `server/.env.example`.
-- `react/` — React 19 + Vite 7 app, deployed to GitHub Pages under `/zit-web/`.
+- `react/` — React 19 + Vite 7 app, deployed to GitHub Pages under `/zit-web/` (until the Docker server replaces it).
+- Docker deploy (2026-11-09): `docker-compose.yml` (project `zit`: web / api / mongo), `server/Dockerfile`,
+  `react/Dockerfile` (build, then nginx 1.28), both `.dockerignore`s, `deploy/` (nginx template, mongo-init,
+  backup.sh, `*.env.example`), root `.env.example` (DOMAIN), `.gitattributes` (LF for server files).
+  Real secrets (`/.env`, `deploy/*.env`) are gitignored and live on the server only. Keep the guide's appendix in sync:
+  it is generated from these files.
 
 ## Server (done, ready for the frontend)
 
@@ -72,7 +77,7 @@ read it before working, and update the "Status" and "Next" sections when somethi
   Icons come from lucide-react.
 - Run: server `npm run dev`, then in `react/` run `npm run dev` → http://localhost:5173/zit-web/ (Vite proxies `/api` to 4586).
   Phone on the same Wi-Fi: `npm run dev -- --host`.
-- Tests in `react/`: `npm test` (149 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`
+- Tests in `react/`: `npm test` (154 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`
   except `PinMap.test.jsx`, which renders real Leaflet) and `npm run test:contract` (12 tests against a real server on
   `zit_test`). Lint: `npx eslint .`. `API_PROXY_TARGET=<url> npx vite` points the dev proxy at another API server.
 - Real-browser checks: Playwright with the installed Chrome, run through `server/tests/run.mjs` against `zit_test`
@@ -103,19 +108,30 @@ read it before working, and update the "Status" and "Next" sections when somethi
 - 2026-11-08 security pass: fixed every code item in `docs/security-report.html` except session length (kept on purpose).
   Packages updated: server body-parser 2.4.0 and multer 2.5.0 (prod audit clean; 2 moderate left in dev-only nodemon);
   react-router 7.18.5 and vite 7.3.7 (0 advisories). Server 315/315, UI 149/149, contract 12/12, real-browser check OK.
+- 2026-11-09 (branch `pre-deploy`, after PR #16 merged the security work): the deploy files from the guide were
+  created and improved (see Layout). Tested without Docker: both build contexts filtered by `.dockerignore`, prod-only
+  install, React build, the API copy in production mode behind proxy headers (Secure cookie, no warnings), compose
+  parsed, nginx template syntax-checked by script. Downloading nginx to run `nginx -t` locally was blocked, so step 9
+  of the guide runs it on the server. Also: a check Vite uses `node_modules/.vite-check` (fixed "useState is null" on the
+  phone).
+- 2026-11-09 home-screen icon: index.html icon links are absolute (`/shortcutIcon/...`, Vite adds the base) so they
+  work from deep pages; iPhone gets `apple-touch-icon.png` (180×180, not the .ico); the manifest has `start_url`/`scope`
+  `../` (= `/zit-web/`) and separate padded `maskable-*.png` icons. Guarded by `src/test/homeScreenIcon.test.js`;
+  real Chrome says installable from `/zit-web/pins/123`.
 - The real DB has test accounts made on request. Their names are kept out of this file, which is public on GitHub.
   Delete them before launch (owner's call).
 
 Reports: `.claude/reports/frontend-report.html` is the full frontend build report (pages, tests, what the tests caught,
 open items). The security report is `docs/security-report.html`, local only because the repo is public.
 `.claude/reports/deployment-guide.html` is the step-by-step Docker deployment guide (13 steps, all config files in the
-appendix). It is tracked and public, so it must never get real secrets, names or domains. Its configs were not run yet
-(no Docker on the dev PC). Open them in a browser.
+appendix, generated from the repo files). It is tracked and public, so it must never get real secrets, names or domains.
+Docker hasn't run the files yet (no Docker on the dev PC). Open the reports in a browser.
 
 ## Next
 
 1. Owner reviews the UI on a phone; fix whatever looks off.
-2. **Deploy to a private server with Docker.** Follow the must-do list (M1–M9) in `docs/security-report.html`:
+2. **Deploy to a private server with Docker.** The files are ready; the owner commits them, tags `v1.0.0`, and follows
+   `.claude/reports/deployment-guide.html` from step 1 on the server. It covers the must-do list (M1–M9) in `docs/security-report.html`:
    - nginx serves the app and proxies `/api` on one origin, so the Lax cookie keeps working;
    - HTTPS;
    - `NODE_ENV=production`, a new 48+ character `SESSION_SECRET`, `TRUST_PROXY=1`;

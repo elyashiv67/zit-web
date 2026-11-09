@@ -1,3 +1,8 @@
 docs/
 .idea/
 .superpowers/
+
+# deployment secrets: created on the server only (deployment guide, step 5)
+/.env
+deploy/*.env
+!deploy/*.env.example
