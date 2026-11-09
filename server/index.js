@@ -1,10 +1,12 @@
 import mongoose from 'mongoose';
 import env from './config/env.js';
 import db_connect from './config/db_config.js';
+import createFirstAdmin from './config/firstAdmin.js';
 import createApp from './app.js';
 
 const start = async () => {
     await db_connect();
+    await createFirstAdmin();
     const server = createApp().listen(env.PORT, () => {
         console.log(`Server is running on port ${env.PORT} ✅ \nhttp://${env.HOST}:${env.PORT}`);
     });

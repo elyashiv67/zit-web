@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "node tests/run.mjs"
+    "test": "node tests/run.mjs && node tests/firstAdmin.test.mjs",
+    "test:first-admin": "node tests/firstAdmin.test.mjs"
   },
   "keywords": [],
   "author": "",

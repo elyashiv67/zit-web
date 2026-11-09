@@ -58,7 +58,13 @@ read it before working, and update the "Status" and "Next" sections when somethi
   - `express.json({inflate: false})`, so a gzip body gets 415;
   - the session store uses `mongoose.connection.name`. Before this fix, test runs wrote their sessions to the real DB.
 - **30-day rolling login is on purpose** (owner, 2026-11-08). Don't shorten it.
-- `npm run dev` (port 4586), `npm test` (315 end-to-end checks on `zit_test`; reads the test DB directly for hashes and sessions).
+- First admin (2026-11-09, `config/firstAdmin.js`, called in `index.js` after the DB connects): when
+  `FIRST_ADMIN_PASSWORD` is set (8+ chars, same rules as all passwords) and the DB has **no users at all**, it creates
+  the admin/user roles, a unit (צפון/עמקים/עפולה) and a job title (מנהל מערכת), or reuses existing ones, plus one admin
+  `FIRST_ADMIN_USERNAME` (default `admin`). The owner's deploy starts fresh (no Atlas copy) and replaces this admin
+  with their own. The real credentials go only in `deploy/api.env` on the server, never in the repo (it's public).
+- `npm run dev` (port 4586), `npm test` (315 end-to-end checks on `zit_test`; reads the test DB directly for hashes and
+  sessions, then `tests/firstAdmin.test.mjs`: 19 checks that restart the server on its own empty `zit_test_first_admin`).
   `node tests/run.mjs "<command>"` runs another suite against the seeded test server (it also seeds a job title, `JOB_TITLE`).
 - **Run the server with `npm run dev`** (nodemon). `npm start` does not reload, so code changes don't apply until a restart.
 

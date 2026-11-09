@@ -40,6 +40,8 @@ Always send `credentials: 'include'` if you ever call the server on a different 
   - role / unit changes apply immediately (no re-login),
   - after a password change, every other device is signed out.
 - Passwords are stored with bcrypt (cost 12). Older, cheaper hashes are upgraded on the user's next login.
+- A fresh database gets its first admin from `FIRST_ADMIN_USERNAME` / `FIRST_ADMIN_PASSWORD` (8+ characters) at startup,
+  together with the `admin` / `user` roles, a unit and a job title. This only happens while there are no users at all.
 - API responses are sent with `Cache-Control: private, no-store` (nothing kept by proxies or the browser cache).
 
 ### Responses

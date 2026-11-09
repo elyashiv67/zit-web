@@ -189,10 +189,10 @@ footer { font-size: 14px; color: var(--muted); }
         <li><a href="#s5">Create the secrets</a></li>
         <li><a href="#s6">Set up Tailscale on the server</a></li>
         <li><a href="#s7">Open ZitWeb to the public with Funnel</a></li>
-        <li><a href="#s8">Start the database and move the data</a></li>
+        <li><a href="#s8">Start the database (fresh, no Atlas)</a></li>
         <li><a href="#s9">Build and start everything</a></li>
         <li><a href="#s10">Check it end to end</a></li>
-        <li><a href="#s11">Clean up the data</a></li>
+        <li><a href="#s11">Replace the first admin</a></li>
         <li><a href="#s12">Backups (and a test restore)</a></li>
         <li><a href="#s13">Retire GitHub Pages and keep it running</a></li>
     </ol>
@@ -326,11 +326,13 @@ cp deploy/mongo.env.example deploy/mongo.env
 chmod 600 deploy/api.env deploy/mongo.env
 
 openssl rand -base64 48     <span class="c"># → SESSION_SECRET in deploy/api.env (new; never reuse the dev one)</span>
+openssl rand -base64 48     <span class="c"># → DVR_SECRET in deploy/api.env (fresh start; see the box below)</span>
+<span class="c"># and FIRST_ADMIN_USERNAME / FIRST_ADMIN_PASSWORD (8+ characters, temporary): the admin you log in with first</span>
 openssl rand -hex 24        <span class="c"># → MONGO_INITDB_ROOT_PASSWORD in deploy/mongo.env</span>
 openssl rand -hex 24        <span class="c"># → ZIT_APP_PASSWORD in deploy/mongo.env, AND inside DB= in deploy/api.env</span>
 nano deploy/api.env  &amp;&amp;  nano deploy/mongo.env</code></pre>
-    <div class="pitfall"><h4>DVR_SECRET: copy it, don't create a new one</h4>
-        <p>The DVR passwords already in the database are encrypted with the <code>DVR_SECRET</code> from your current <code>server/.env</code>. Copy that exact value into <code>deploy/api.env</code>. A new value makes every stored DVR password unreadable. Also store a copy offline (a password manager, or paper in a safe), <b>separate from the backups</b>.</p>
+    <div class="pitfall"><h4>DVR_SECRET: new for a fresh start, copied for the Atlas data</h4>
+        <p><b>Fresh start (step 8):</b> there are no stored DVR passwords yet, so use a new value. <b>Only if you copy the Atlas data:</b> those DVR passwords are encrypted with the <code>DVR_SECRET</code> from your current <code>server/.env</code>, so copy that exact value instead; a new one would make them unreadable. <b>Either way, never change it later.</b> Once pins have DVR passwords, a new value makes all of them unreadable. Also store a copy offline (a password manager, or paper in a safe), <b>separate from the backups</b>.</p>
     </div>
     <div class="verify"><h4>Check</h4><ul><li><code>ls -l deploy/*.env</code> shows <code>-rw-------</code>.</li><li>No placeholder text is left: <code>grep -n '&lt;' deploy/*.env</code> prints nothing.</li></ul></div>
 </div>
@@ -387,39 +389,34 @@ tailscale serve status                 <span class="c"># "Funnel on" must appear
 <!-- ============================== STEP 8 ============================== -->
 <section id="s8">
 <div class="step">
-    <div class="step-head"><div class="num">8</div><div><h3>Start the database and move the data <span class="where">server</span></h3><p>Start Mongo alone, copy the current data into it, then copy the pin photos. Login sessions are not copied: everyone logs in once on the new server, which is expected because the session secret is new.</p></div></div>
+    <div class="step-head"><div class="num">8</div><div><h3>Start the database (fresh, no Atlas) <span class="where">server</span></h3><p>The owner's choice (2026-11-09): start with an empty database. On its first start the API creates the <code>admin</code> and <code>user</code> roles, a unit (צפון / עמקים / עפולה), a job title (מנהל מערכת) and one admin from <code>FIRST_ADMIN_USERNAME</code> / <code>FIRST_ADMIN_PASSWORD</code> in <code>deploy/api.env</code> (step 5). The unit and the job title can be renamed in ניהול later.</p></div></div>
 <pre><code>cd /srv/zit
+grep -c '^FIRST_ADMIN_' deploy/api.env  <span class="c"># 2: both lines are filled in (the password needs 8+ characters)</span>
 docker compose up -d mongo
-docker compose ps                      <span class="c"># wait until mongo is "healthy"</span>
-
-<span class="c"># 1) database: Atlas → the new Mongo. In Atlas → Network Access, temporarily allow SERVER_IP.</span>
+docker compose ps                      <span class="c"># wait until mongo is "healthy"</span></code></pre>
+    <p class="muted">The first admin itself is created in step 9, when the API starts. It's created only while the database has <b>no users at all</b>, so restarts never add a second one, and a deleted first admin never comes back.</p>
+    <div class="opt"><h4>Optional: bring the old data from Atlas instead</h4>
+        <p>Only if you want the existing users, pins and history. Do it <b>now, before the API's first start</b>, and leave <code>FIRST_ADMIN_USERNAME</code> / <code>FIRST_ADMIN_PASSWORD</code> empty: the copied users include your admin.</p>
+<pre><code><span class="c"># database: Atlas → the new Mongo. In Atlas → Network Access, temporarily allow the server's public IP.</span>
 read -rs ATLAS_URI                     <span class="c"># paste the Atlas connection string (not saved in shell history)</span>
 docker run --rm mongo:8.0 mongodump --uri "$ATLAS_URI" --db Zit --excludeCollection sessions --archive --gzip &gt; /tmp/zit.archive.gz
 docker compose exec -T mongo sh -c 'mongorestore -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip' &lt; /tmp/zit.archive.gz
 shred -u /tmp/zit.archive.gz; unset ATLAS_URI
 
-<span class="c"># 2) photos: from the machine the server runs on today (its server/uploads/pins folder)</span>
+<span class="c"># photos: from the machine the server runs on today (its server/uploads/pins folder)</span>
 <span class="c">#    on that machine:  scp -r server/uploads/pins deploy@SERVER_IP:/tmp/pins</span>
 docker compose up -d api               <span class="c"># creates the uploads volume (and its pins/ folder)</span>
 <span class="c"># copy with a throwaway container: api has no Linux capabilities, so even its root can't chown.</span>
 <span class="c"># 1000 is the "node" user the API runs as</span>
 docker run --rm -v zit_uploads:/data -v /tmp/pins:/src:ro alpine sh -c 'cp -a /src/. /data/pins/ &amp;&amp; chown -R 1000:1000 /data'
 rm -rf /tmp/pins</code></pre>
-    <div class="opt"><h4><span class="where">Option A</span> staying on Atlas</h4>
-        <ul>
-            <li>Delete the <code>mongo</code> service and the <code>mongo-data</code> volume from <code>docker-compose.yml</code>, and the <code>depends_on: mongo</code> lines from <code>api</code>.</li>
-            <li>In Atlas → Network Access, allow <b>only</b> <code>SERVER_IP</code>, and remove <code>0.0.0.0/0</code> if it's there.</li>
-            <li>In Atlas → Database Access, create a user with <code>readWrite</code> on <code>Zit</code> only, and put its connection string in <code>DB=</code>.</li>
-            <li>The free Atlas tier (M0) has <b>no backups</b>, so step 12's script backs it up for you.</li>
-            <li>Only the photos need to be copied.</li>
-        </ul>
+        <p>Check: the counts below match Atlas. Then remove the server's IP from Atlas's network access.</p>
     </div>
-    <div class="verify"><h4>Check</h4>
+    <div class="verify"><h4>Check (after step 9 for a fresh start)</h4>
 <pre><code>docker compose exec mongo sh -c 'mongosh -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --quiet --eval "
   const z = db.getSiblingDB(\"Zit\");
-  printjson({users: z.users.countDocuments(), pins: z.pins.countDocuments(), units: z.units.countDocuments(), roles: z.roles.countDocuments()})"'
-docker compose exec api sh -c 'ls /data/uploads/pins | wc -l'    <span class="c"># = number of pins that have photos</span></code></pre>
-        <p>The counts should match Atlas. Then remove <code>SERVER_IP</code> from Atlas's network access if you're leaving Atlas.</p>
+  printjson({users: z.users.countDocuments(), pins: z.pins.countDocuments(), units: z.units.countDocuments(), roles: z.roles.countDocuments()})"'</code></pre>
+        <p>Fresh start: <code>users: 1, pins: 0, units: 1, roles: 2</code>, and <code>docker compose logs api</code> shows <code>First admin "…" created</code>.</p>
     </div>
 </div>
 </section>
@@ -460,7 +457,7 @@ curl -m 10 -sI https://zit-server.your-tailnet.ts.net:8443</code></pre>
         <ul>
             <li>Open <code>https://zit-server.your-tailnet.ts.net</code>. It redirects to <code>/zit-web/</code> with a lock icon and no certificate warning.</li>
             <li>Log in, then open the pins page: the map tiles appear.</li>
-            <li>Open a pin and reveal its DVR password. If it shows correctly, <code>DVR_SECRET</code> is right.</li>
+            <li>Create a pin with a DVR password, then open it and reveal the password. If it shows correctly, encryption works.</li>
             <li>Upload a photo, then open it.</li>
             <li>Refresh the page: you stay logged in.</li>
             <li>Log out, then press Back: you get the login page, not data.</li>
@@ -473,13 +470,15 @@ curl -m 10 -sI https://zit-server.your-tailnet.ts.net:8443</code></pre>
 <!-- ============================== STEP 11 ============================== -->
 <section id="s11">
 <div class="step">
-    <div class="step-head"><div class="num">11</div><div><h3>Clean up the data <span class="where">the app (admin)</span></h3><p>Leftovers from development.</p></div></div>
-    <ul>
-        <li>In <b>ניהול → משתמשים</b>, delete the test accounts created during development (security report M6).</li>
-        <li>Give the admin a long password (12+ characters). New passwords must be at least 8 characters.</li>
-        <li>Nothing to do for older passwords: each user's stored hash is upgraded to the stronger setting (bcrypt cost 12) automatically at their next login.</li>
-    </ul>
-    <div class="verify"><h4>Check</h4><ul><li>The users list shows only real people, and at least one admin. The server won't let you remove the last admin.</li></ul></div>
+    <div class="step-head"><div class="num">11</div><div><h3>Replace the first admin <span class="where">the app (admin) + server</span></h3><p>Do this right after step 10. The first admin has placeholder details and a temporary password, and the site is public.</p></div></div>
+    <ol>
+        <li>Log in with <code>FIRST_ADMIN_USERNAME</code> / <code>FIRST_ADMIN_PASSWORD</code>.</li>
+        <li>In <b>ניהול</b>, fix the unit and the job title if needed (or add the right ones), then in <b>משתמשים</b> create <b>your own</b> user with the <b>admin</b> permission and a long password (12+ characters).</li>
+        <li>Log out, log in as your new admin, and delete the first admin in <b>משתמשים</b>.</li>
+        <li>On the server, delete the two <code>FIRST_ADMIN_</code> lines from <code>deploy/api.env</code> and run <code>docker compose up -d api</code>. A deleted first admin never comes back while other users exist, but the temporary password shouldn't stay on disk.</li>
+    </ol>
+    <p class="muted">If you copied the Atlas data instead: delete the development test accounts in <b>משתמשים</b> (security report M6). Older passwords need nothing: each hash is upgraded to bcrypt cost 12 at the user's next login.</p>
+    <div class="verify"><h4>Check</h4><ul><li>The users list shows only real people, and at least one admin. The server won't let you remove the last admin.</li><li>Logging in with the first admin's details gives "wrong username or password".</li></ul></div>
 </div>
 </section>
 
@@ -816,14 +815,23 @@ DB=mongodb://zit_app:&lt;ZIT_APP_PASSWORD&gt;@mongo:27017/Zit?authSource=Zit
 <span class="c"># NEW value, never the development one: openssl rand -base64 48</span>
 SESSION_SECRET=&lt;48+ random characters&gt;
 
-<span class="c"># COPY the existing value from server/.env on your PC. A new value makes every stored DVR password unreadable.</span>
+<span class="c"># Encrypts the DVR passwords. Fresh database: a NEW value (openssl rand -base64 48).</span>
+<span class="c"># Only when copying the Atlas data: the existing value from server/.env on your PC instead.</span>
+<span class="c"># Never change it once pins have DVR passwords: a new value makes every stored one unreadable.</span>
 <span class="c"># Keep a copy offline too (a password manager), separate from the backups.</span>
-DVR_SECRET=&lt;existing value&gt;
+DVR_SECRET=&lt;openssl rand -base64 48&gt;
+
 
 <span class="c"># nginx is the one proxy in front of the API</span>
 TRUST_PROXY=1
 <span class="c"># the "uploads" volume (pin photos)</span>
 UPLOADS_DIR=/data/uploads
+
+<span class="c"># First admin for an EMPTY database (no Atlas copy): created on the first start, only while there are no users.</span>
+<span class="c"># Log in with it, create your own admin, log in as that one, delete this one, then delete these two lines.</span>
+<span class="c"># The password follows the app's rule: at least 8 characters.</span>
+FIRST_ADMIN_USERNAME=&lt;your username&gt;
+FIRST_ADMIN_PASSWORD=&lt;8+ characters, temporary&gt;
 
 <span class="c"># COOKIE_SECURE is on by default in production. JWT_SECRET is no longer used.</span></code></pre>
         </div>
