@@ -1,0 +1,81 @@
+# nginx for ZitWeb, used by the "web" container (docker-compose.yml).
+# HTTPS is handled by Tailscale Funnel on the host: https://<server>.<tailnet>.ts.net → http://127.0.0.1:8080 → here.
+# The file lands in /etc/nginx/conf.d/default.conf, inside nginx's http { } block.
+
+# The user's real IP: tailscaled (on the host) adds X-Forwarded-For, and its requests reach this container from
+# Docker's bridge gateway. Only those addresses are trusted to set it; walking from the right, the first untrusted
+# address is the client, so a value the client sends itself is ignored. Port 8080 is published on 127.0.0.1 only,
+# so every connection comes through a Docker gateway; Docker picks its networks from these private ranges
+# (more projects on the server can push it from 172.x to 192.168.x or 10.x).
+set_real_ip_from 172.16.0.0/12;
+set_real_ip_from 192.168.0.0/16;
+set_real_ip_from 10.0.0.0/8;
+set_real_ip_from 127.0.0.1;
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+
+# Built files under /zit-web/assets/ have a content hash in their name, so they can be cached for a year.
+# Everything else in the app (index.html, icons, manifest) is revalidated, so a new version shows up at once.
+# After try_files falls back to index.html, $uri is /zit-web/index.html, so the fallback gets "no-cache".
+map $uri $zit_cache_control {
+    ~^/zit-web/assets/  "public, max-age=31536000, immutable";
+    default             "no-cache";
+}
+
+server {
+    listen 80;
+    server_name _;
+    server_tokens off;
+    # nginx only sees http (Tailscale did the https part), so redirects must stay relative ("Location: /zit-web/"),
+    # or the browser would be sent to http://
+    absolute_redirect off;
+
+    client_max_body_size 1m;
+
+    location = / { return 302 /zit-web/; }
+    location = /zit-web { return 301 /zit-web/; }
+
+    # the React app. NOTE: add_header inside a location replaces the server-level ones, so all are listed here
+    location /zit-web/ {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /zit-web/index.html;
+
+        gzip on;
+        gzip_types text/css application/javascript image/svg+xml application/json application/manifest+json;
+
+        add_header Cache-Control $zit_cache_control always;
+        add_header Strict-Transport-Security "max-age=31536000" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        # OSM's tile servers require a referrer, so not "no-referrer"
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        # the pin form asks for the phone's location; photos come from a file input, which needs no camera permission
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self)" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    }
+
+    # the API: "/api/x?y" → "http://api:4586/x?y". helmet adds the API's own security headers.
+    location /api/ {
+        # Docker's DNS, asked again every 10s: a rebuilt api container gets a new address, and nginx follows it
+        # (a fixed "proxy_pass http://api:4586/" would keep the old address and answer 502 until a restart)
+        resolver 127.0.0.11 valid=10s ipv6=off;
+        set $api_upstream api:4586;
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass http://$api_upstream;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # one hop in front of Node (this nginx), matching TRUST_PROXY=1. $remote_addr is the real client IP from above.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        # users only reach this port through Funnel's https (it listens on 127.0.0.1 only), so the login cookie is Secure
+        proxy_set_header X-Forwarded-Proto https;
+
+        # photo uploads: up to 10 × 25MB per request, phones can be slow
+        client_max_body_size 260m;
+        client_body_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+    }
+
+    # nothing else is served
+    location / { return 404; }
+}

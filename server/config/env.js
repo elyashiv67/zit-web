@@ -1,5 +1,9 @@
 import 'dotenv/config';
 import {z} from 'zod';
+import {MAX_PASSWORD_BYTES} from './passwords.js';
+
+// an empty line in an env file ("FIRST_ADMIN_PASSWORD=") counts as not set
+const optional = schema => z.preprocess(v => (v === '' ? undefined : v), schema.optional());
 
 // every setting the server reads, checked once at startup so a missing / bad value stops the
 // server with a clear message instead of failing later on some request
@@ -18,6 +22,12 @@ const envSchema = z.object({
     // number of proxies in front of the server (nginx / Docker = 1) so req.ip is the user's real IP
     TRUST_PROXY: z.coerce.number().int().min(0).default(0),
     UPLOADS_DIR: z.string().min(1).optional(),
+    // first admin on a database with no users yet (config/firstAdmin.js); ignored once any user exists.
+    // Same password rules as everywhere else.
+    FIRST_ADMIN_USERNAME: optional(z.string().trim().toLowerCase().min(1).max(100)),
+    FIRST_ADMIN_PASSWORD: optional(z.string()
+        .min(8, 'must be at least 8 characters')
+        .refine(p => Buffer.byteLength(p, 'utf8') <= MAX_PASSWORD_BYTES, `must be at most ${MAX_PASSWORD_BYTES} bytes`)),
 });
 
 const parsed = envSchema.safeParse(process.env);

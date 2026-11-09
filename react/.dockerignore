@@ -1,0 +1,10 @@
+# kept out of the build: installed / built output, the logo source packs, local env files
+node_modules
+dist
+assets
+.env
+.env.*
+coverage
+*.log
+Dockerfile
+.dockerignore
