@@ -58,8 +58,9 @@ describe('login and protected pages', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent('יותר מדי ניסיונות');
     });
 
-    it('?next= cannot send the user to another site', async () => {
-        const {router} = renderApp('/login?next=//evil.example', {
+    // browsers read both //host and /\host as "another site"
+    it.each(['//evil.example', '/\\evil.example'])('?next=%s cannot send the user to another site', async next => {
+        const {router} = renderApp(`/login?next=${encodeURIComponent(next)}`, {
             api: {'POST /auth/login': {user: makeUser()}, 'GET /pin/allUnit': []},
         });
         await findHeading('התחברות');

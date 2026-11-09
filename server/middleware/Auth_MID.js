@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import {getUserById_auth, getUserByName_auth} from '../controllers/Auth_C.js';
+import {getUserById_auth, getUserByName_auth, replacePasswordHash_auth} from '../controllers/Auth_C.js';
 import {clearSessionCookie} from '../config/session.js';
+import {BCRYPT_ROUNDS, hashPassword, needsRehash} from '../config/passwords.js';
 
 // The session (stored in MongoDB) only holds the user id and when the login happened.
 // The user itself is reloaded on every request, so a deleted user is locked out right away
@@ -9,7 +10,8 @@ import {clearSessionCookie} from '../config/session.js';
 
 // compared against when the username doesn't exist, so a wrong username takes as long as a
 // wrong password and the response time doesn't reveal which usernames exist
-const DUMMY_HASH = bcrypt.hashSync(crypto.randomUUID(), 10);
+// (same cost as real hashes, or the timing would differ)
+const DUMMY_HASH = bcrypt.hashSync(crypto.randomUUID(), BCRYPT_ROUNDS);
 
 // the user object on req.user and in login / me responses
 function buildReqUser(user) {
@@ -59,7 +61,9 @@ async function CheckLogin(req, res, next) {
         await endSession(req, res);
         return res.status(401).json({message: 'user no longer exists, need to login'});
     }
-    if (user.pass_changed_at && req.session.login_at < user.pass_changed_at.getTime()) {
+    // every login stores login_at; a session without it can't be checked against a password change
+    const loginAt = req.session.login_at;
+    if (typeof loginAt !== 'number' || (user.pass_changed_at && loginAt < user.pass_changed_at.getTime())) {
         await endSession(req, res);
         return res.status(401).json({message: 'password was changed, need to login'});
     }
@@ -77,6 +81,10 @@ async function LogInByPass(req, res) {
         return res.status(401).json({message: 'invalid username or password'});
     if (!user.role || !user.unit)
         return res.status(403).json({message: 'account has no role or unit, contact an admin'});
+
+    // the plain password is only here at login: the moment to move an older, cheaper hash to the current cost
+    if (needsRehash(user.pass))
+        await replacePasswordHash_auth(user._id, await hashPassword(password));
 
     await startSession(req, user);
     return res.status(200).json({message: 'Successfully logged in', user: buildReqUser(user)});

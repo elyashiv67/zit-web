@@ -19,7 +19,8 @@ function decrypt(stored) {
     // values saved before encryption was added are returned as they are
     if (typeof stored !== 'string' || !stored.startsWith(PREFIX)) return stored;
     const [iv, tag, data] = stored.slice(PREFIX.length).split(':').map(s => Buffer.from(s, 'base64'));
-    const decipher = crypto.createDecipheriv('aes-256-gcm', KEY, iv);
+    // only full 16-byte tags (what encrypt writes): a shortened tag would be easier to forge
+    const decipher = crypto.createDecipheriv('aes-256-gcm', KEY, iv, {authTagLength: 16});
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
 }

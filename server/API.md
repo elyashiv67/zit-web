@@ -39,6 +39,8 @@ Always send `credentials: 'include'` if you ever call the server on a different 
   - a deleted user is locked out on the next request,
   - role / unit changes apply immediately (no re-login),
   - after a password change, every other device is signed out.
+- Passwords are stored with bcrypt (cost 12). Older, cheaper hashes are upgraded on the user's next login.
+- API responses are sent with `Cache-Control: private, no-store` (nothing kept by proxies or the browser cache).
 
 ### Responses
 
@@ -81,6 +83,7 @@ GET /timeDiff/my?page=2&limit=20
 | 409 | conflict: duplicate value, or delete blocked (in use / last admin) | show `message` |
 | 429 | too many failed attempts | show `message`, wait 15 min (`Retry-After` header) |
 | 413 | request body too large | |
+| 415 | compressed (gzip / deflate) request body — not accepted | |
 | 500 | server error (details only in the server log) | show a generic error |
 | 503 | database unavailable | show "try again in a moment" — **not** a login redirect |
 
@@ -132,7 +135,7 @@ The `user` object from login / `me`:
 |---|---|
 | `name` | string, 1–100 |
 | `user_name` | string, 1–100, unique, case-insensitive (stored lowercase) |
-| `pass` | string, 6–100 |
+| `pass` | string, 8+ characters and at most 72 bytes (bcrypt reads only 72: 36 Hebrew letters or 72 English) |
 | `TZ` | string, unique |
 | `police_id` | string, unique |
 | `phone` | 1–10 digits, unique |
@@ -167,7 +170,7 @@ The password hash is never returned.
 **PATCH `/user/:id/password`**
 - changing your own: `current_password` is required. This device stays logged in; all other devices are logged out.
 - admin resetting someone else's: only `new_password`. That user is logged out everywhere.
-- `new_password`: 6–100 chars, must differ from the current one.
+- `new_password`: 8+ characters, at most 72 bytes (as `pass` above), must differ from the current one.
 - errors: 400 missing / wrong `current_password` (`field: "current_password"`), 400 same password (`field: "new_password"`),
   429 after 5 wrong `current_password` attempts in 15 min.
 
@@ -182,11 +185,9 @@ If users delete themselves, their session ends in the same response (cookie clea
 |---|---|---|---|---|
 | GET | `/role` | login | – | array |
 | GET | `/role/:id` | login | – | role |
-| POST | `/role` | admin | `{ level: positive integer, name: "admin" \| "user" }` | 201 `{ message, role }` |
-| PATCH | `/role/:id` | admin | any of `level`, `name` | `{ message, role }` |
-| DELETE | `/role/:id` | admin | – | `{ message, id }` |
 
-`level` and `name` are unique (409). Delete → 409 if any user has the role.
+Read-only. The two roles (`admin`, `user`) are seeded once and can't be created, renamed or deleted through the API
+(that could leave the system with no admin), so those requests get 404.
 The role is the **permission** (admin / user). The job title below is separate and gives no permissions.
 
 ---
@@ -283,6 +284,9 @@ Pin object:
 
 - Up to 10 images per upload and 10 per pin (also enforced when two uploads happen at the same time). Each file up to 25MB, up to 100 megapixels.
 - Formats in: jpeg, png, webp (HEIC only if the server can decode it — otherwise 400 asking for "Most Compatible").
+  The format is checked by the file's own first bytes, not the browser's type, before anything parses it (SVG, GIF etc. → 400).
+- The form may hold only files: any text field → 400.
+- Images are served with `Cache-Control: private, max-age=86400` (names never change; only the user's browser may keep them).
 - Every image is rotated by EXIF, shrunk to max 2560px, converted to jpg and compressed to **≤ 5MB**. EXIF (GPS, device) is removed.
 - If any file in the upload is bad, nothing is saved (400).
 - Uploads stream to a temp folder (not RAM) and at most 2 images are compressed at once, so many / slow phone uploads can't run the server out of memory.

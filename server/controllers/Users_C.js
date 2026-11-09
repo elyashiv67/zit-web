@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import {hashPassword} from '../config/passwords.js';
 import User from '../modules/users.js';
 import Role from '../modules/roles.js';
 import Unit from '../modules/units.js';
@@ -48,7 +49,7 @@ async function registerUser(req, res) {
     if (missing)
         return res.status(400).json({message: `${missing} not found`, field: missing});
 
-    const newUser = await User.create({...data, pass: await bcrypt.hash(data.pass, 10)});
+    const newUser = await User.create({...data, pass: await hashPassword(data.pass)});
     return res.status(201).json({message: 'User created successfully', user: newUser});
 }
 
@@ -136,7 +137,7 @@ async function changePassword(req, res) {
     if (await bcrypt.compare(new_password, user.pass))
         return res.status(400).json({message: 'new password must be different from the current one', field: 'new_password'});
 
-    user.pass = await bcrypt.hash(new_password, 10);
+    user.pass = await hashPassword(new_password);
     user.pass_changed_at = new Date();
     await user.save();
 

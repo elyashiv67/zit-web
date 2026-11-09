@@ -22,6 +22,9 @@ function sessionMiddleware() {
         secret: env.SESSION_SECRET,
         store: MongoStore.create({
             client: mongoose.connection.getClient(),
+            // the same database as everything else. Without it connect-mongo uses the one in the DB
+            // connection string and ignores DB_NAME, so test runs wrote their sessions to the real DB
+            dbName: mongoose.connection.name,
             collectionName: 'sessions',
             touchAfter: 24 * 60 * 60, // write the new expiry to the DB at most once a day
         }),

@@ -1,10 +1,13 @@
 import {z} from 'zod';
 import {objectId, atLeastOneField} from './common_S.js';
+import {MAX_PASSWORD_BYTES} from '../config/passwords.js';
 
 const userKeys = {
     name: z.string().trim().min(1).max(100),
     user_name: z.string().trim().toLowerCase().min(1).max(100), // case-insensitive: Admin = admin
-    pass: z.string().min(6).max(100),
+    // 8+ characters; at most 72 bytes because bcrypt ignores the rest (36 Hebrew letters, 72 English)
+    pass: z.string().min(8).refine(p => Buffer.byteLength(p, 'utf8') <= MAX_PASSWORD_BYTES,
+        {message: `password must be at most ${MAX_PASSWORD_BYTES} bytes (36 Hebrew letters or 72 English ones)`}),
     TZ: z.string().trim().min(1),
     police_id: z.string().trim().min(1),
     phone: z.string().regex(/^\d{1,10}$/, {message: 'phone must be 1-10 digits'}),

@@ -74,7 +74,7 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', {timeout: 20_000}, (
 
     it('admin creates a user with the exact body the admin form sends; a duplicate gives the Hebrew 409', async () => {
         const body = {
-            name: 'בודק חוזה', user_name: `contract_${R}`, pass: 'secret1', TZ: `9${R}`, police_id: `c${R}`,
+            name: 'בודק חוזה', user_name: `contract_${R}`, pass: 'secret12', TZ: `9${R}`, police_id: `c${R}`,
             phone: `05${R}`.slice(0, 10), email: `c${R}@test.local`, role: ids.userRole, unit: ids.unit, job_title: JOB_TITLE,
         };
         const {user} = await api('/auth/register', {method: 'POST', body});
@@ -152,13 +152,13 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', {timeout: 20_000}, (
 
     it('a regular user gets the Hebrew 403 on admin routes, and can change their own password and stay logged in', async () => {
         jar.clear();
-        await api('/auth/login', {method: 'POST', body: {username: `contract_${R}`, password: 'secret1'}});
+        await api('/auth/login', {method: 'POST', body: {username: `contract_${R}`, password: 'secret12'}});
         const forbidden = await api('/user?page=1&limit=20').catch(e => e);
         expect(forbidden.status).toBe(403);
         expect(forbidden.message).toBe('אין לך הרשאה לפעולה הזאת');
-        const wrong = await api(`/user/${ids.user}/password`, {method: 'PATCH', body: {current_password: 'bad', new_password: 'secret2'}}).catch(e => e);
+        const wrong = await api(`/user/${ids.user}/password`, {method: 'PATCH', body: {current_password: 'bad', new_password: 'secret22'}}).catch(e => e);
         expect(wrong.message).toBe('הסיסמה הנוכחית שגויה');
-        await api(`/user/${ids.user}/password`, {method: 'PATCH', body: {current_password: 'secret1', new_password: 'secret2'}});
+        await api(`/user/${ids.user}/password`, {method: 'PATCH', body: {current_password: 'secret12', new_password: 'secret22'}});
         expect((await api('/auth/me')).user.id).toBe(ids.user);
     });
 
