@@ -41,7 +41,7 @@ services:
 
   # Option A (Atlas): delete this whole service and the mongo-data volume below
   mongo:
-    image: mongo:8.0
+    image: mongo:7.0
     env_file: ./deploy/mongo.env
     volumes:
       - mongo-data:/data/db
