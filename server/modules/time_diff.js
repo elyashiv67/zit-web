@@ -33,6 +33,11 @@ const TimeDiffSchema = new mongoose.Schema({
     },
     dvr_lastSave: {
         type: Date
+    },
+    // where the DVR is, optional (the history offers to save it as a pin)
+    location: {
+        type: new mongoose.Schema({lat: {type: Number, required: true}, lng: {type: Number, required: true}}, {_id: false}),
+        default: undefined
     }
 },
     {

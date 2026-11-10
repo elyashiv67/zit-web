@@ -433,6 +433,16 @@ for (const bad of [null, true, 0, 1700000000000, '2026-10-21T10:00:00', '2026-13
 r = await t('date with +03:00 offset is converted', u1, 'POST', '/timeDiff', {name: 'cam 1', real_time: '2026-10-21T13:00:00+03:00', dvr_time: '2026-10-21T10:00:00Z'}, 201,
     d => must(d.timeDiff.offset_ms === 0, `offset ${d.timeDiff.offset_ms}`));
 await t('remove it', u1, 'DELETE', `/timeDiff/${r.data.timeDiff?._id}`, undefined, 200);
+// an optional location (where the DVR is), so the history can turn it into a pin later
+r = await t('save with a location', u1, 'POST', '/timeDiff', {name: 'cam loc', real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T10:00:00Z', location: {lat: 32.6, lng: 35.29}}, 201,
+    d => must(d.timeDiff?.location?.lat === 32.6 && d.timeDiff.location.lng === 35.29, `location ${JSON.stringify(d.timeDiff?.location)}`));
+await t('the location comes back on read', u1, 'GET', `/timeDiff/${r.data.timeDiff?._id}`, undefined, 200,
+    d => must(d.location?.lat === 32.6 && d.location.lng === 35.29, `location ${JSON.stringify(d.location)}`));
+await t('remove it', u1, 'DELETE', `/timeDiff/${r.data.timeDiff?._id}`, undefined, 200);
+await t('a diff without a location has none', u1, 'GET', `/timeDiff/${ids.td1}`, undefined, 200, d => must(!('location' in d), JSON.stringify(d.location)));
+for (const [label, location] of [['lat out of range', {lat: 91, lng: 35}], ['lng out of range', {lat: 32, lng: 181}],
+    ['missing lng', {lat: 32}], ['as text', '32.6,35.29'], ['null', null], ['string numbers', {lat: '32', lng: '35'}]])
+    await t(`save with location ${label} -> 400`, u1, 'POST', '/timeDiff', {name: 'cam 1', real_time: '2026-10-21T10:00:00Z', dvr_time: '2026-10-21T10:00:00Z', location}, 400);
 await t('my history (newest first)', u1, 'GET', '/timeDiff/my', undefined, 200, d => must(d.items.length === 2 && d.total === 2 && d.items[0]._id === ids.td2, 'wrong order/count'));
 await t('unit history', u1, 'GET', '/timeDiff/allUnit', undefined, 200, d => must(d.items.some(x => x._id === ids.td1) && !d.items.some(x => x._id === ids.td3), 'unit filter wrong'));
 await t('all history (user) -> 403', u1, 'GET', '/timeDiff', undefined, 403);

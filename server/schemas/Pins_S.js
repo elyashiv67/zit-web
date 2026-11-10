@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {atLeastOneField} from './common_S.js';
+import {atLeastOneField, location} from './common_S.js';
 
 // the map marker: one icon on one color, from these lists only (the app shows the same lists)
 const MARKER_ICONS = ['cctv', 'video', 'webcam', 'camera', 'eye', 'store', 'building', 'pin'];
@@ -9,10 +9,7 @@ const MARKER_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'br
 // image is managed only through the /pin/:id/images routes (upload / delete)
 const pinKeys = {
     name: z.string().trim().min(1).max(100),
-    location: z.object({
-        lat: z.number().min(-90).max(90),
-        lng: z.number().min(-180).max(180),
-    }),
+    location,
     dvrUserName: z.string().trim().min(1).max(100),
     dvrPassword: z.string().min(1).max(100),
     // the person who owns the DVR (e.g. the shop owner): a name, the rest optional

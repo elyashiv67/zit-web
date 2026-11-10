@@ -1,11 +1,13 @@
 import {useRef, useState} from 'react';
 import {Link} from 'react-router';
-import {CalendarClock, Clock, LoaderCircle, LogIn, Save, TimerReset} from 'lucide-react';
+import {CalendarClock, Clock, LoaderCircle, LocateFixed, LogIn, Map as MapIcon, MapPin, Save, TimerReset, X} from 'lucide-react';
 import {api} from '../api/client.js';
 import {useAuth} from '../auth/AuthContext.jsx';
 import {Field} from '../components/Field.jsx';
+import LazyPinMap from '../components/LazyPinMap.jsx';
 import {useToast} from '../components/Toast.jsx';
-import {useSessionDate, useSessionText} from '../hooks/useSessionDate.js';
+import {useMyLocation} from '../hooks/useMyLocation.js';
+import {useSessionDate, useSessionPoint, useSessionText} from '../hooks/useSessionDate.js';
 import {
     daysSince, daysText, directionText, dvrTimeFor, formatClock, formatDateTime,
     fromLocalInput, offsetParts, realTimeFor, toLocalInput,
@@ -49,6 +51,44 @@ function Readout({parts}) {
     );
 }
 
+// where the DVR is (optional, logged-in only: it is saved with the diff, and the history can turn it into a pin).
+// The map loads only once it is needed: after "my location", or when the user asks to pick on the map
+function LocationSection({point, onChange, picking, setPicking}) {
+    const {locate, locating} = useMyLocation(onChange);
+    const showMap = Boolean(point) || picking;
+    return (
+        <section className="section" aria-labelledby="loc-title">
+            <h2 id="loc-title" className="section-title"><MapPin size={22} aria-hidden="true" /> מיקום ה-DVR</h2>
+            <p className="section-text">לא חובה. נשמר עם החישוב, ומההיסטוריה אפשר לשמור אותו כנקודה במפה.</p>
+            <div className="loc-actions">
+                <button type="button" className="btn btn-ghost" onClick={locate} disabled={locating}>
+                    {locating ? <LoaderCircle size={20} className="spin" aria-hidden="true" /> : <LocateFixed size={20} aria-hidden="true" />}
+                    המיקום שלי
+                </button>
+                {!showMap && (
+                    <button type="button" className="btn btn-ghost" onClick={() => setPicking(true)}>
+                        <MapIcon size={20} aria-hidden="true" /> בחירה במפה
+                    </button>
+                )}
+            </div>
+            {showMap && (
+                <>
+                    <p className="field-hint">{point ? 'אפשר ללחוץ על המפה כדי לתקן את המיקום.' : 'לחצו על המפה במקום של ה-DVR.'}</p>
+                    <LazyPinMap picked={point} onPick={onChange} height={220} />
+                </>
+            )}
+            {point && (
+                <div className="loc-picked">
+                    <span className="nums" dir="ltr">{point.lat.toFixed(6)}, {point.lng.toFixed(6)}</span>
+                    <button type="button" className="btn btn-ghost" onClick={() => { onChange(null); setPicking(false); }}>
+                        <X size={20} aria-hidden="true" /> הסרת המיקום
+                    </button>
+                </div>
+            )}
+        </section>
+    );
+}
+
 // Public page — the calculator works without login; logged-in users can also save the result to their history
 export default function TimeDiffPage() {
     const {user} = useAuth();
@@ -63,6 +103,8 @@ export default function TimeDiffPage() {
     const nameRef = useRef(null);
     // the event calculator: the user types in one box and the other one is computed from it
     const [event, setEvent] = useState({source: null, time: null});
+    const [location, setLocation] = useSessionPoint('zit.diffLocation');
+    const [pickingOnMap, setPickingOnMap] = useState(false);
     const [saving, setSaving] = useState(false);
 
     const parts = offsetParts(realTime, dvrTime);
@@ -85,6 +127,7 @@ export default function TimeDiffPage() {
                     real_time: realTime.toISOString(),
                     dvr_time: dvrTime.toISOString(),
                     ...(lastSave && {dvr_lastSave: toLocalInput(lastSave, false)}),
+                    ...(location && {location}),
                 },
             });
             toast.success('ההפרש נשמר בהיסטוריה');
@@ -94,6 +137,8 @@ export default function TimeDiffPage() {
             setRealTime(null);
             setLastSave(null);
             setEvent({source: null, time: null});
+            setLocation(null);
+            setPickingOnMap(false);
             window.scrollTo({top: 0, behavior: 'smooth'});
         } catch (err) {
             toast.error(err.message);
@@ -145,6 +190,8 @@ export default function TimeDiffPage() {
                     </p>
                 )}
             </section>
+
+            {user && <LocationSection point={location} onChange={setLocation} picking={pickingOnMap} setPicking={setPickingOnMap} />}
 
             {user ? (
                 <button type="button" className="btn btn-outline-ink btn-block" onClick={save} disabled={!parts || saving}>

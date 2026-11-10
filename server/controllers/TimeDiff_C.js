@@ -37,7 +37,7 @@ async function getTimeDiffById(req, res) {
 }
 
 async function addTimeDiff(req, res) {
-    const {name, real_time, dvr_time, dvr_lastSave} = req.valid_body;
+    const {name, real_time, dvr_time, dvr_lastSave, location} = req.valid_body;
 
     const newDiff = await TimeDiff.create({
         name,
@@ -47,6 +47,7 @@ async function addTimeDiff(req, res) {
         dvr_time,
         offset_ms: dvr_time.getTime() - real_time.getTime(),
         dvr_lastSave,
+        location,
     });
 
     return res.status(201).json({message: 'Time diff added successfully.', timeDiff: newDiff});

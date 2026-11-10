@@ -40,6 +40,9 @@ read it before working, and update the "Status" and "Next" sections when somethi
   and return `{items, page, limit, total, pages}`. Units, roles and pins are plain arrays.
 - Last-admin protection: re-checked after the change, and undone if no admin is left.
 - Time diffs have a required `name` on save (the history title); older records have none ("ללא שם" in the UI).
+- Time diffs have an optional `location` `{lat, lng}` (same rule as a pin location, shared `location` in `schemas/common_S.js`).
+  The calculator (logged in only) sets it with "המיקום שלי" or a map tap; a history row with one opens to a map and
+  "שמירה כנקודה" → `/pins/new?lat=&lng=&name=` (the pin form reads these; an invalid place is ignored).
 - Pins have an optional `dvr_owner` `{name, id_number?, phone?, notes?}`: name required when set; on PATCH it is
   replaced as a whole and `null` removes it. It is in the lists too (only the DVR password is hidden there).
 - Pins have an optional `marker` `{icon, color}` from fixed lists (`MARKER_ICONS` / `MARKER_COLORS` in `schemas/Pins_S.js`);
@@ -63,7 +66,7 @@ read it before working, and update the "Status" and "Next" sections when somethi
   the admin/user roles, a unit (צפון/עמקים/עפולה) and a job title (מנהל מערכת), or reuses existing ones, plus one admin
   `FIRST_ADMIN_USERNAME` (default `admin`). The owner's deploy starts fresh (no Atlas copy) and replaces this admin
   with their own. The real credentials go only in `deploy/api.env` on the server, never in the repo (it's public).
-- `npm run dev` (port 4586), `npm test` (315 end-to-end checks on `zit_test`; reads the test DB directly for hashes and
+- `npm run dev` (port 4586), `npm test` (325 end-to-end checks on `zit_test`; reads the test DB directly for hashes and
   sessions, then `tests/firstAdmin.test.mjs`: 19 checks that restart the server on its own empty `zit_test_first_admin`).
   `node tests/run.mjs "<command>"` runs another suite against the seeded test server (it also seeds a job title, `JOB_TITLE`).
 - **Run the server with `npm run dev`** (nodemon). `npm start` does not reload, so code changes don't apply until a restart.
@@ -89,7 +92,7 @@ read it before working, and update the "Status" and "Next" sections when somethi
   Icons come from lucide-react.
 - Run: server `npm run dev`, then in `react/` run `npm run dev` → http://localhost:5173/zit-web/ (Vite proxies `/api` to 4586).
   Phone on the same Wi-Fi: `npm run dev -- --host`.
-- Tests in `react/`: `npm test` (154 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`
+- Tests in `react/`: `npm test` (182 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`
   except `PinMap.test.jsx`, which renders real Leaflet) and `npm run test:contract` (12 tests against a real server on
   `zit_test`). Lint: `npx eslint .`. `API_PROXY_TARGET=<url> npx vite` points the dev proxy at another API server.
 - Real-browser checks: Playwright with the installed Chrome, run through `server/tests/run.mjs` against `zit_test`
@@ -130,6 +133,11 @@ read it before working, and update the "Status" and "Next" sections when somethi
   work from deep pages; iPhone gets `apple-touch-icon.png` (180×180, not the .ico); the manifest has `start_url`/`scope`
   `../` (= `/zit-web/`) and separate padded `maskable-*.png` icons. Guarded by `src/test/homeScreenIcon.test.js`;
   real Chrome says installable from `/zit-web/pins/123`.
+- 2026-11-10 (branch `first-patch`, after the deploy went live): the password field takes its direction from the text
+  (`lib/textDirection.js`: Hebrew → eye on the left, English / digits → eye on the right; it used to be forced LTR
+  while the eye stayed on the RTL side, so it covered English text). Time diff location + "save as pin" from the history
+  (see Server). GPS code shared in `hooks/useMyLocation.js`. Server 325/325, first admin 19/19, UI 182/182,
+  contract 12/12, real-Chrome check at phone size 18/18.
 - The real DB has test accounts made on request. Their names are kept out of this file, which is public on GitHub.
   Delete them before launch (owner's call).
 

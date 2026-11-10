@@ -1,8 +1,9 @@
 import {useState} from 'react';
-import {useNavigate, useParams} from 'react-router';
+import {useNavigate, useParams, useSearchParams} from 'react-router';
 import {Camera, CircleAlert, LoaderCircle, LocateFixed, Save} from 'lucide-react';
 import {api} from '../api/client.js';
 import {useAsync} from '../hooks/useAsync.js';
+import {useMyLocation} from '../hooks/useMyLocation.js';
 import {useToast} from '../components/Toast.jsx';
 import {Field, PasswordField} from '../components/Field.jsx';
 import LazyPinMap from '../components/LazyPinMap.jsx';
@@ -40,16 +41,24 @@ function ownerFrom(form) {
     return Object.fromEntries(Object.entries(owner).filter(([, value]) => value));
 }
 
-function PinForm({pin}) {
+// a new pin can start from a place in the address (/pins/new?lat=&lng=&name=, the history's "save as pin").
+// A place that isn't valid is left out, so the form simply asks for one.
+function fromAddress(params) {
+    const start = {name: (params.get('name') ?? '').slice(0, 100)};
+    const place = {...toForm(), lat: params.get('lat') ?? '', lng: params.get('lng') ?? ''};
+    const errors = validatePin(place);
+    return errors.lat || errors.lng ? start : {...start, lat: place.lat, lng: place.lng};
+}
+
+function PinForm({pin, start}) {
     const navigate = useNavigate();
     const toast = useToast();
     const editing = Boolean(pin);
-    const [form, setForm] = useState(() => toForm(pin));
+    const [form, setForm] = useState(() => ({...toForm(pin), ...start}));
     const [files, setFiles] = useState([]);
     const [errors, setErrors] = useState({});
     const [formError, setFormError] = useState('');
     const [busy, setBusy] = useState(false);
-    const [locating, setLocating] = useState(false);
     // a new pin starts with the default look; an existing pin with its own marker, or with none (null) — it then
     // keeps the plain red dot until someone picks, and the picker shows nothing chosen
     const storedMarker = findMarker(pin?.marker) ? {icon: pin.marker.icon, color: pin.marker.color} : null;
@@ -59,24 +68,7 @@ function PinForm({pin}) {
     const locationErrors = validatePin(form);
     const picked = !locationErrors.lat && !locationErrors.lng ? {lat: Number(form.lat), lng: Number(form.lng)} : null;
 
-    const useMyLocation = () => {
-        if (!navigator.geolocation) {
-            toast.error('המכשיר לא תומך במיקום');
-            return;
-        }
-        setLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            pos => {
-                setForm(f => ({...f, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6)}));
-                setLocating(false);
-            },
-            () => {
-                toast.error('לא הצלחנו לקבל מיקום. בדקו שהרשאת המיקום פתוחה');
-                setLocating(false);
-            },
-            {enableHighAccuracy: true, timeout: 15000},
-        );
-    };
+    const {locate, locating} = useMyLocation(({lat, lng}) => setForm(f => ({...f, lat: String(lat), lng: String(lng)})));
 
     const submit = async e => {
         e.preventDefault();
@@ -146,7 +138,7 @@ function PinForm({pin}) {
                     <h2 id="loc-title" className="section-title">מיקום</h2>
                     <p className="section-text">לחצו על המפה, או השתמשו במיקום הנוכחי שלכם.</p>
                     <LazyPinMap picked={picked} onPick={({lat, lng}) => setForm(f => ({...f, lat: String(lat), lng: String(lng)}))} height={240} />
-                    <button type="button" className="btn btn-ghost" onClick={useMyLocation} disabled={locating}>
+                    <button type="button" className="btn btn-ghost" onClick={locate} disabled={locating}>
                         {locating ? <LoaderCircle size={20} className="spin" aria-hidden="true" /> : <LocateFixed size={20} aria-hidden="true" />}
                         המיקום שלי
                     </button>
@@ -201,7 +193,8 @@ function PinForm({pin}) {
 }
 
 export function NewPinPage() {
-    return <PinForm />;
+    const [params] = useSearchParams();
+    return <PinForm start={fromAddress(params)} />;
 }
 
 export function EditPinPage() {

@@ -47,3 +47,27 @@ export function useSessionText(key) {
 
     return [value, set];
 }
+
+// the same for a map point {lat, lng} (where the DVR is); anything else in storage counts as no point
+export function useSessionPoint(key) {
+    const [value, setValue] = useState(() => {
+        try {
+            const point = JSON.parse(sessionStorage.getItem(key));
+            return Number.isFinite(point?.lat) && Number.isFinite(point?.lng) ? {lat: point.lat, lng: point.lng} : null;
+        } catch {
+            return null;
+        }
+    });
+
+    const set = useCallback(point => {
+        setValue(point);
+        try {
+            if (point) sessionStorage.setItem(key, JSON.stringify({lat: point.lat, lng: point.lng}));
+            else sessionStorage.removeItem(key);
+        } catch {
+            // private mode / storage blocked: the value still works for this visit
+        }
+    }, [key]);
+
+    return [value, set];
+}

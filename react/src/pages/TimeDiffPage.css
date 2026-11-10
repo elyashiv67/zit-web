@@ -42,3 +42,8 @@
 .event-result strong { font-size: 20px; font-weight: 800; }
 
 .since-save { font-size: 20px; font-weight: 800; text-align: center; }
+
+/* where the DVR is: the two buttons side by side, then the chosen point with a way to remove it */
+.loc-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.loc-actions .btn { flex: 1 1 160px; }
+.loc-picked { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; font-size: 15px; }
