@@ -74,6 +74,53 @@ describe('history', () => {
         expect(await screen.findByText('עוד אין חישובים שמורים')).toBeInTheDocument();
         expect(screen.getByRole('link', {name: 'לחישוב הפרש זמנים'})).toHaveAttribute('href', '/');
     });
+
+    it('a diff with a location opens to a map and a "save as pin" link with its place and name', async () => {
+        renderApp('/history', {user, api: {'GET /timeDiff/my': page([
+            diff('a', {name: 'מצלמה כניסה', location: {lat: 32.6, lng: 35.29}}),
+            diff('b', {name: 'בלי מיקום'}),
+        ])}});
+        const toggle = await screen.findByRole('button', {name: /מצלמה כניסה/});
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+
+        await userEvent.click(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        const [withPlace] = screen.getAllByRole('listitem');
+        expect(await within(withPlace).findByTestId('map')).toHaveAttribute('data-picked', '32.6,35.29');
+        const href = within(withPlace).getByRole('link', {name: /שמירה כנקודה/}).getAttribute('href');
+        const url = new URL(href, 'http://x');
+        expect(url.pathname).toBe('/pins/new');
+        expect(Object.fromEntries(url.searchParams)).toEqual({lat: '32.6', lng: '35.29', name: 'מצלמה כניסה'});
+
+        await userEvent.click(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+    });
+
+    it('a diff without a location has nothing to open', async () => {
+        renderApp('/history', {user, api: {'GET /timeDiff/my': page([diff('b', {name: 'בלי מיקום'})])}});
+        await screen.findByText('בלי מיקום');
+        expect(screen.queryByRole('button', {name: /בלי מיקום/})).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', {name: /שמירה כנקודה/})).not.toBeInTheDocument();
+    });
+
+    it('"save as pin" opens the new pin form filled with the place and the name', async () => {
+        renderApp('/history', {user, api: {'GET /timeDiff/my': page([diff('a', {name: 'מצלמה כניסה', location: {lat: 32.6, lng: 35.29}})])}});
+        await userEvent.click(await screen.findByRole('button', {name: /מצלמה כניסה/}));
+        await userEvent.click(screen.getByRole('link', {name: /שמירה כנקודה/}));
+        await findHeading('נקודה חדשה');
+        expect(screen.getByLabelText('שם הנקודה')).toHaveValue('מצלמה כניסה');
+        expect(screen.getByLabelText('קו רוחב')).toHaveValue('32.6');
+        expect(screen.getByLabelText('קו אורך')).toHaveValue('35.29');
+    });
+
+    it('an old record without a name sends only the place (the pin form asks for a name)', async () => {
+        renderApp('/history', {user, api: {'GET /timeDiff/my': page([diff('a', {location: {lat: 32.6, lng: 35.29}})])}});
+        await userEvent.click(await screen.findByRole('button', {name: /ללא שם/}));
+        const url = new URL(screen.getByRole('link', {name: /שמירה כנקודה/}).getAttribute('href'), 'http://x');
+        expect(Object.fromEntries(url.searchParams)).toEqual({lat: '32.6', lng: '35.29'});
+    });
 });
 
 describe('profile', () => {

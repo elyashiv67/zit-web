@@ -138,13 +138,16 @@ describe.skipIf(!BASE)('frontend ↔ real server contract', {timeout: 20_000}, (
         const dvr = new Date('2026-11-04T10:03:25');
         const {timeDiff} = await api('/timeDiff', {
             method: 'POST',
-            body: {name: 'מצלמת חוזה', real_time: real.toISOString(), dvr_time: dvr.toISOString(), dvr_lastSave: toLocalInput(new Date('2026-10-30T00:00:00'), false)},
+            body: {name: 'מצלמת חוזה', real_time: real.toISOString(), dvr_time: dvr.toISOString(), dvr_lastSave: toLocalInput(new Date('2026-10-30T00:00:00'), false),
+                location: {lat: 32.612346, lng: 35.298765}},
         });
         ids.diff = timeDiff._id;
         expect(timeDiff.offset_ms).toBe(offsetParts(real, dvr).ms);
         const page = await api('/timeDiff/my?page=1&limit=20');
         const saved = page.items.find(d => d._id === ids.diff);
         expect(saved.name).toBe('מצלמת חוזה');
+        // the history row gets the place back exactly, for its "save as pin" link
+        expect(saved.location).toEqual({lat: 32.612346, lng: 35.298765});
         expect(partsFromMs(saved.offset_ms)).toMatchObject({direction: 'ahead', minutes: 3, seconds: 25});
         expect((await api('/timeDiff/allUnit?page=1&limit=20')).items.some(d => d._id === ids.diff)).toBe(true);
         await api(`/timeDiff/${ids.diff}`, {method: 'DELETE'});

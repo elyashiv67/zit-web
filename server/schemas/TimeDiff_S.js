@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {location} from './common_S.js';
 
 // owner, assigned_unit and offset_ms are never taken from the body —
 // owner/unit come from the logged-in user, offset_ms is computed from the two times
@@ -14,6 +15,8 @@ const addTimeDiffSchema = z.object({
     real_time: isoDate,
     dvr_time: isoDate,
     dvr_lastSave: isoDate.optional(),
+    // where the DVR is (optional); the history can turn it into a pin
+    location: location.optional(),
 });
 
 export {addTimeDiffSchema};

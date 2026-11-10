@@ -1,6 +1,6 @@
-import {useState} from 'react';
+import {useId, useState} from 'react';
 import {Link} from 'react-router';
-import {CalendarClock, ChevronDown, History, LoaderCircle, Trash2, UserRound} from 'lucide-react';
+import {CalendarClock, ChevronDown, History, LoaderCircle, MapPin, MapPinPlus, Trash2, UserRound} from 'lucide-react';
 import {api} from '../api/client.js';
 import {useAuth} from '../auth/AuthContext.jsx';
 import {useDelayedFlag} from '../hooks/useAsync.js';
@@ -10,14 +10,30 @@ import {ListSkeleton} from '../components/Skeleton.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import ErrorState from '../components/ErrorState.jsx';
+import LazyPinMap from '../components/LazyPinMap.jsx';
 import {daysText, directionText, formatClock, formatDateTime, partsFromMs} from '../lib/timeMath.js';
+
+// the new pin form, filled in with this record's place and name (records saved before names existed have none)
+function newPinLink(item) {
+    const params = new URLSearchParams({lat: String(item.location.lat), lng: String(item.location.lng)});
+    if (item.name) params.set('name', item.name);
+    return `/pins/new?${params}`;
+}
 
 function HistoryItem({item, canDelete, onDelete, mine}) {
     const parts = partsFromMs(item.offset_ms);
+    // a record with a place opens to show it on a map, with a way to save it as a pin
+    const hasPlace = Boolean(item.location);
+    const [open, setOpen] = useState(false);
+    const placeId = useId();
+    const Main = hasPlace ? 'button' : 'div';
+    const toggle = hasPlace
+        ? {type: 'button', className: 'row-main row-toggle', 'aria-expanded': open, 'aria-controls': placeId, onClick: () => setOpen(o => !o)}
+        : {className: 'row-main'};
     return (
-        <li className="row-card">
+        <li className="row-card history-item">
             <div className="history-icon" aria-hidden="true"><CalendarClock size={22} /></div>
-            <div className="row-main">
+            <Main {...toggle}>
                 {/* records saved before names existed have none */}
                 <span className="row-title">{item.name || 'ללא שם'}</span>
                 <span className="history-offset">
@@ -29,12 +45,26 @@ function HistoryItem({item, canDelete, onDelete, mine}) {
                     <span>אמת <span className="nums">{formatDateTime(new Date(item.real_time))}</span></span>
                     <span>DVR <span className="nums">{formatDateTime(new Date(item.dvr_time))}</span></span>
                     {mine && <span className="chip"><UserRound size={14} aria-hidden="true" /> שלי</span>}
+                    {hasPlace && (
+                        <span className="chip">
+                            <MapPin size={14} aria-hidden="true" /> מיקום
+                            <ChevronDown size={14} aria-hidden="true" className={`row-chevron ${open ? 'row-chevron-open' : ''}`} />
+                        </span>
+                    )}
                 </span>
-            </div>
+            </Main>
             {canDelete && (
                 <button type="button" className="icon-btn" onClick={() => onDelete(item)} aria-label="מחיקת הרשומה">
                     <Trash2 size={20} aria-hidden="true" />
                 </button>
+            )}
+            {hasPlace && open && (
+                <div id={placeId} className="history-place">
+                    <LazyPinMap picked={item.location} height={180} />
+                    <Link to={newPinLink(item)} className="btn btn-primary">
+                        <MapPinPlus size={20} aria-hidden="true" /> שמירה כנקודה
+                    </Link>
+                </div>
             )}
         </li>
     );

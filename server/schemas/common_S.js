@@ -12,4 +12,10 @@ function atLeastOneField(schema) {
     return schema.refine(obj => Object.keys(obj).length > 0, {message: 'no valid fields to update'});
 }
 
-export {objectId, atLeastOneField};
+// a point on the map (pins, and where a time diff was checked)
+const location = z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+});
+
+export {objectId, atLeastOneField, location};

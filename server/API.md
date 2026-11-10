@@ -313,7 +313,7 @@ Showing an image (cookies are sent automatically on same origin):
 ## Time diff — `/timeDiff`
 
 The calculator page is public and runs in the browser. These routes only save and read history, so they need login.
-Not related to pins.
+Not linked to pins: a record can hold a `location`, and the app offers to start a new pin from it.
 
 | Method | Path | Access | Body | Response |
 |---|---|---|---|---|
@@ -321,13 +321,15 @@ Not related to pins.
 | GET | `/timeDiff/my` | login | `?page&limit` | my history, [paged](#paging), newest first |
 | GET | `/timeDiff/allUnit` | login | `?page&limit` | my unit's history, [paged](#paging), newest first |
 | GET | `/timeDiff/:id` | owner/unit/admin | – | time diff |
-| POST | `/timeDiff` | login | `{ name, real_time, dvr_time, dvr_lastSave? }` | 201 `{ message, timeDiff }` |
+| POST | `/timeDiff` | login | `{ name, real_time, dvr_time, dvr_lastSave?, location? }` | 201 `{ message, timeDiff }` |
 | DELETE | `/timeDiff/:id` | owner/admin | – | `{ message, id }` |
 
 - `name` (string, 1–100, required) says what was checked, e.g. a camera or a place. It is the record's title in the history,
   so others in the unit understand it. Records saved before the field existed have no `name`.
 - Times must be ISO 8601 with `Z` or an offset — just send `date.toISOString()`. A plain date (`2026-10-21`) is also fine.
   `null`, numbers, `true`, and times without a timezone (`2026-10-21T10:00:00`) are rejected with 400.
+- `location` (optional) is `{ lat, lng }` as numbers, the same rule as a pin location (lat −90…90, lng −180…180).
+  Records without one have no `location` key.
 - The owner can always read their own records, even after moving to another unit.
 - The server computes `offset_ms = dvr_time - real_time` (negative = DVR is behind).
 - `owner` and `assigned_unit` come from the logged-in user.
@@ -338,7 +340,7 @@ Time diff object:
 {
   "_id": "…", "name": "מצלמה כניסה ראשית", "owner": "<user id>", "assigned_unit": "<unit id>",
   "real_time": "2026-10-22T10:00:00.000Z", "dvr_time": "2026-10-22T09:58:30.000Z",
-  "offset_ms": -90000, "dvr_lastSave": "…",
+  "offset_ms": -90000, "dvr_lastSave": "…", "location": { "lat": 32.6, "lng": 35.29 },
   "createdAt": "…", "updatedAt": "…"
 }
 ```

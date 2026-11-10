@@ -412,6 +412,28 @@ describe('pin form', () => {
         expect(await screen.findByText('הנקודה נוספה')).toBeInTheDocument();
     });
 
+    it('opened from a history record: name and place are already filled in, and the pin is created with them', async () => {
+        const created = makePin({_id: 'new1', name: 'מצלמה כניסה'});
+        const {server} = renderApp('/pins/new?lat=32.6&lng=35.29&name=%D7%9E%D7%A6%D7%9C%D7%9E%D7%94%20%D7%9B%D7%A0%D7%99%D7%A1%D7%94', {user, api: {
+            'POST /pin': {status: 201, body: {pin: created}},
+            'GET /pin/new1': created,
+        }});
+        await findHeading('נקודה חדשה');
+        expect(screen.getByLabelText('שם הנקודה')).toHaveValue('מצלמה כניסה');
+        expect(screen.getByTestId('map')).toHaveAttribute('data-picked', '32.6,35.29');
+        await userEvent.click(screen.getByRole('button', {name: /הוספת הנקודה/}));
+        await waitFor(() => expect(server.callsTo('POST', '/pin')).toHaveLength(1));
+        expect(server.callsTo('POST', '/pin')[0].body).toMatchObject({name: 'מצלמה כניסה', location: {lat: 32.6, lng: 35.29}});
+    });
+
+    it('a broken place in the address is ignored, not shown as an error', async () => {
+        renderApp('/pins/new?lat=abc&lng=500&name=', {user});
+        await findHeading('נקודה חדשה');
+        expect(screen.getByLabelText('קו רוחב')).toHaveValue('');
+        expect(screen.getByLabelText('קו אורך')).toHaveValue('');
+        expect(screen.getByLabelText('שם הנקודה')).toHaveValue('');
+    });
+
     it('"my location" fills the coordinates from the phone', async () => {
         Object.defineProperty(navigator, 'geolocation', {
             configurable: true,

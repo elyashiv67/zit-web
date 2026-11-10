@@ -147,3 +147,85 @@ describe('time diff page (public)', () => {
         expect(await screen.findByText('השרת לא זמין כרגע. נסו שוב בעוד רגע')).toBeInTheDocument();
     });
 });
+
+describe('time diff location (where the DVR is)', () => {
+    const fakeGps = (latitude, longitude) => Object.defineProperty(navigator, 'geolocation', {
+        configurable: true,
+        value: {getCurrentPosition: ok => ok({coords: {latitude, longitude}})},
+    });
+    const fillDiff = () => {
+        setInput('שם (מצלמה / מקום)', 'מצלמה כניסה');
+        setInput('זמן DVR', '2026-11-04T10:03:25');
+        setInput('זמן אמת', '2026-11-04T10:00:00');
+    };
+    const saveOk = {'POST /timeDiff': {status: 201, body: {timeDiff: {}}}};
+
+    it('logged out: no location section (only saved diffs have one)', async () => {
+        renderApp('/');
+        await screen.findByRole('link', {name: /התחברו כדי לשמור/});
+        expect(screen.queryByRole('button', {name: /המיקום שלי/})).not.toBeInTheDocument();
+    });
+
+    it('no map until it is needed, so the page stays light', async () => {
+        renderApp('/', {user: makeUser()});
+        await screen.findByRole('button', {name: /המיקום שלי/});
+        expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+    });
+
+    it('"my location" puts the phone location on the map and saves it with the diff', async () => {
+        fakeGps(32.61234567, 35.29876543);
+        const {server} = renderApp('/', {user: makeUser(), api: saveOk});
+        await userEvent.click(await screen.findByRole('button', {name: /המיקום שלי/}));
+        expect(await screen.findByTestId('map')).toHaveAttribute('data-picked', '32.612346,35.298765');
+        fillDiff();
+        await userEvent.click(screen.getByRole('button', {name: /שמירה להיסטוריה/}));
+        await screen.findByText('ההפרש נשמר בהיסטוריה');
+        expect(server.callsTo('POST', '/timeDiff')[0].body.location).toEqual({lat: 32.612346, lng: 35.298765});
+        // cleared with the rest, ready for the next camera
+        expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+        expect(sessionStorage.getItem('zit.diffLocation')).toBeNull();
+    });
+
+    it('a location can be picked on the map instead', async () => {
+        const {server} = renderApp('/', {user: makeUser(), api: saveOk});
+        await userEvent.click(await screen.findByRole('button', {name: /בחירה במפה/}));
+        await userEvent.click(await screen.findByRole('button', {name: 'pick on map'}));
+        expect(screen.getByTestId('map')).toHaveAttribute('data-picked', '32.5,35.1');
+        fillDiff();
+        await userEvent.click(screen.getByRole('button', {name: /שמירה להיסטוריה/}));
+        await screen.findByText('ההפרש נשמר בהיסטוריה');
+        expect(server.callsTo('POST', '/timeDiff')[0].body.location).toEqual({lat: 32.5, lng: 35.1});
+    });
+
+    it('the location can be removed, and then none is sent', async () => {
+        fakeGps(32.6, 35.29);
+        const {server} = renderApp('/', {user: makeUser(), api: saveOk});
+        await userEvent.click(await screen.findByRole('button', {name: /המיקום שלי/}));
+        await userEvent.click(screen.getByRole('button', {name: /הסרת המיקום/}));
+        expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+        fillDiff();
+        await userEvent.click(screen.getByRole('button', {name: /שמירה להיסטוריה/}));
+        await screen.findByText('ההפרש נשמר בהיסטוריה');
+        expect(server.callsTo('POST', '/timeDiff')[0].body).not.toHaveProperty('location');
+    });
+
+    it('no location permission: says so, and the diff can still be saved without one', async () => {
+        Object.defineProperty(navigator, 'geolocation', {
+            configurable: true,
+            value: {getCurrentPosition: (ok, fail) => fail({code: 1})},
+        });
+        renderApp('/', {user: makeUser()});
+        await userEvent.click(await screen.findByRole('button', {name: /המיקום שלי/}));
+        expect(await screen.findByText('לא הצלחנו לקבל מיקום. בדקו שהרשאת המיקום פתוחה')).toBeInTheDocument();
+        expect(screen.queryByTestId('map')).not.toBeInTheDocument();
+    });
+
+    it('the location survives a trip to another page (sessionStorage)', async () => {
+        fakeGps(32.6, 35.29);
+        const first = renderApp('/', {user: makeUser()});
+        await userEvent.click(await screen.findByRole('button', {name: /המיקום שלי/}));
+        first.unmount();
+        renderApp('/', {user: makeUser()});
+        expect(await screen.findByTestId('map')).toHaveAttribute('data-picked', '32.6,35.29');
+    });
+});
