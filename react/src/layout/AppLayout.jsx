@@ -1,7 +1,7 @@
 import {NavLink, Outlet, Link} from 'react-router';
 import {Clock, History, LogIn, MapPin, Shield, UserRound} from 'lucide-react';
 import {useAuth} from '../auth/AuthContext.jsx';
-import Logo from '../assets/logo-2/default.svg?react';
+import logoUrl from '../assets/logo.png';
 import './AppLayout.css';
 
 function navItems(user) {
@@ -40,7 +40,7 @@ export default function AppLayout() {
             <a href="#main" className="skip-link">דילוג לתוכן</a>
             <header className="app-header">
                 <Link to="/" className="brand" aria-label="ZitWeb, הפרש זמנים">
-                    <Logo className="brand-logo" aria-hidden="true" />
+                    <img src={logoUrl} className="brand-logo" alt="" width="40" height="40" />
                     <span className="brand-text">
                         <span className="brand-name">ZitWeb</span>
                         {user?.unit?.station && <span className="brand-unit">{user.unit.station}</span>}

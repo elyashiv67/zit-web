@@ -15,6 +15,15 @@ describe('time diff page (public)', () => {
         await waitFor(() => expect(server.calls.map(c => c.path)).toEqual(['/auth/me']));
     });
 
+    it('the header shows the app logo (decorative: the link already says where it goes)', async () => {
+        renderApp('/');
+        const brand = await screen.findByRole('link', {name: 'ZitWeb, הפרש זמנים'});
+        const logo = brand.querySelector('img');
+        expect(logo).toHaveAttribute('src', expect.stringMatching(/assets\/logo\.png$/));
+        expect(logo).toHaveAttribute('alt', '');
+        expect(logo).toHaveAttribute('width', '40');
+    });
+
     it('shows how far ahead the DVR is', async () => {
         renderApp('/');
         setInput('זמן DVR', '2026-11-04T10:03:25');

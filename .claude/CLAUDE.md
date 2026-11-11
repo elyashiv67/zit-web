@@ -92,7 +92,7 @@ read it before working, and update the "Status" and "Next" sections when somethi
   Icons come from lucide-react.
 - Run: server `npm run dev`, then in `react/` run `npm run dev` → http://localhost:5173/zit-web/ (Vite proxies `/api` to 4586).
   Phone on the same Wi-Fi: `npm run dev -- --host`.
-- Tests in `react/`: `npm test` (182 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`
+- Tests in `react/`: `npm test` (188 tests, fake server in `src/test/utils.jsx`, PinMap mocked in `src/test/setup.jsx`
   except `PinMap.test.jsx`, which renders real Leaflet) and `npm run test:contract` (12 tests against a real server on
   `zit_test`). Lint: `npx eslint .`. `API_PROXY_TARGET=<url> npx vite` points the dev proxy at another API server.
 - Real-browser checks: Playwright with the installed Chrome, run through `server/tests/run.mjs` against `zit_test`
@@ -119,7 +119,7 @@ read it before working, and update the "Status" and "Next" sections when somethi
 - Real-browser checks exist now (see Frontend); the owner still reviews on a phone.
 - 2026-11-08 (branch `final-tweaks`): back link on the pin page (history back when opened in-app, else `/pins`; also on
   not-found), mouse-wheel zoom on the pins list map only (`PinMap` `wheelZoom` prop, off elsewhere so page scroll isn't
-  trapped). Logo source packs moved to `react/assets/` (not imported; the header uses `src/assets/logo-2`).
+  trapped).
 - 2026-11-08 security pass: fixed every code item in `docs/security-report.html` except session length (kept on purpose).
   Packages updated: server body-parser 2.4.0 and multer 2.5.0 (prod audit clean; 2 moderate left in dev-only nodemon);
   react-router 7.18.5 and vite 7.3.7 (0 advisories). Server 315/315, UI 149/149, contract 12/12, real-browser check OK.
@@ -138,6 +138,14 @@ read it before working, and update the "Status" and "Next" sections when somethi
   while the eye stayed on the RTL side, so it covered English text). Time diff location + "save as pin" from the history
   (see Server). GPS code shared in `hooks/useMyLocation.js`. Server 325/325, first admin 19/19, UI 182/182,
   contract 12/12, real-Chrome check at phone size 18/18.
+- 2026-11-11 new logo (camera + clock in a map pin): source `react/src/assets/new_logo.jpeg` (not imported). Generated
+  from it: header `src/assets/logo.png` (120px, shown at 40), and in `public/shortcutIcon/` the rounded transparent
+  "any" icons, opaque `apple-touch-icon.png`, opaque `maskable-*` (logo at 84% on its own background #10121E),
+  `favicon.ico` (16/32/48) and `favicon-96x96.png`. Manifest `background_color` #050510. The old logo (all packs,
+  `logo 1`, `logo-2`, `logo.jpeg`, `favicon.svg`, the stray `site.webmanifest`) and `vite-plugin-svgr` were removed.
+  `homeScreenIcon.test.js` guards opacity / transparency, the .ico sizes and no unused files in the icon folder.
+- Vitest on Windows: run it from a path with an uppercase drive (`D:\coding\...`). From `d:\...` every file fails with
+  "Vitest failed to find the current suite" (Vitest loads twice under two path spellings).
 - The real DB has test accounts made on request. Their names are kept out of this file, which is public on GitHub.
   Delete them before launch (owner's call).
 

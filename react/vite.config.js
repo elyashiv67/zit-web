@@ -1,10 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import svgr from 'vite-plugin-svgr'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr()],
+  plugins: [react()],
   base: '/zit-web/',
   // A check run (API_PROXY_TARGET set) gets its own dependency cache. Sharing node_modules/.vite with a dev
   // server that is already running rewrites that server's prebundled chunks under it, and the next lazy import
